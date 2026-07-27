@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { HERO_HEADLINE, HERO_SUPPORT, STUDIO_PATH } from "../constants";
+import { HERO_HEADLINE, HERO_SUPPORT, WORKFLOWS_PATH } from "../constants";
 
 const RISE = {
   hidden: { opacity: 0, y: 18 },
@@ -45,7 +45,7 @@ export function HeroIntro() {
           Talk to us
         </button>
         <Link
-          href={STUDIO_PATH}
+          href={WORKFLOWS_PATH}
           className="bg-brand px-6 py-3 text-sm font-medium text-on-brand transition-opacity hover:opacity-90"
         >
           Open studio

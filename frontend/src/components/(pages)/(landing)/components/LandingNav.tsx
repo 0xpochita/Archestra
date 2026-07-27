@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BRAND_LOGO_SRC, NAV_LINKS, STUDIO_PATH } from "../constants";
+import { BRAND_LOGO_SRC, NAV_LINKS, WORKFLOWS_PATH } from "../constants";
 
 export function LandingNav() {
   return (
@@ -53,7 +53,7 @@ export function LandingNav() {
           Sign in
         </button>
         <Link
-          href={STUDIO_PATH}
+          href={WORKFLOWS_PATH}
           className="bg-brand px-4 py-2 text-sm font-medium text-on-brand transition-opacity hover:opacity-90"
         >
           Open studio

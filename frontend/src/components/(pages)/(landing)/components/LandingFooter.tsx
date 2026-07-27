@@ -6,7 +6,7 @@ import {
   FOOTER_GROUPS,
   FOOTER_NOTE,
   FOOTER_TAGLINE,
-  STUDIO_PATH,
+  WORKFLOWS_PATH,
 } from "../constants";
 
 export function LandingFooter() {
@@ -30,7 +30,7 @@ export function LandingFooter() {
             {FOOTER_TAGLINE}
           </p>
           <Link
-            href={STUDIO_PATH}
+            href={WORKFLOWS_PATH}
             className="mt-6 inline-block border border-line px-4 py-2 text-sm text-ink transition-colors hover:bg-surface-hover"
           >
             Open studio

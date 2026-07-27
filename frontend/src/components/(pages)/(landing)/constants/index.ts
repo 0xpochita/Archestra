@@ -1,3 +1,8 @@
+export {
+  ARCHESTRA_LOGO_SRC as BRAND_LOGO_SRC,
+  WORKFLOWS_PATH,
+} from "@/constants/assets";
+
 import type {
   FlowCard,
   FlowConnector,
@@ -5,10 +10,6 @@ import type {
   HeroWord,
   NavLink,
 } from "../types";
-
-export const BRAND_LOGO_SRC =
-  "/assets/images/logo/logo-brands/logo-archestra.png";
-export const STUDIO_PATH = "/studio";
 
 export const HERO_HEADLINE = "Automating complex DeFi strategies";
 export const HERO_SUPPORT =
