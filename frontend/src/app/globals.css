@@ -21,6 +21,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  --font-apple:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 @layer base {
   body {
     background-color: var(--color-shell);
@@ -54,6 +60,14 @@
     var(--color-canvas-dot) 1px,
     transparent 1.6px
   );
+}
+
+.builder-grid {
+  background-color: var(--color-canvas);
+  background-image:
+    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
 .scroll-slim::-webkit-scrollbar {
