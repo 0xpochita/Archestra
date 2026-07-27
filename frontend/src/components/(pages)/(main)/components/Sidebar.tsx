@@ -3,10 +3,19 @@
 import Link from "next/link";
 import { LuPencilRuler, LuWorkflow } from "react-icons/lu";
 import { Icon } from "@/components/ui/Icon";
+import {
+  SIDEBAR_ACTIVE_CLASS,
+  SIDEBAR_IDLE_CLASS,
+  SIDEBAR_ROW_CLASS,
+  SidebarSection,
+  SidebarShell,
+  SidebarText,
+} from "@/components/ui/SidebarShell";
 import { WORKFLOWS_PATH } from "@/constants/assets";
 import type { IconName } from "@/types/icon";
 
 interface SidebarProps {
+  isOpen: boolean;
   isBlockLibraryOpen: boolean;
   isLocked: boolean;
   canUndo: boolean;
@@ -17,42 +26,42 @@ interface SidebarProps {
   onRedo: () => void;
 }
 
-interface RailButtonProps {
+interface SidebarButtonProps {
   icon: IconName;
   label: string;
+  isOpen: boolean;
   isActive?: boolean;
   isDisabled?: boolean;
   onClick: () => void;
 }
 
-function RailButton({
+function SidebarButton({
   icon,
   label,
+  isOpen,
   isActive = false,
   isDisabled = false,
   onClick,
-}: RailButtonProps) {
+}: SidebarButtonProps) {
   return (
     <button
       type="button"
-      aria-label={label}
       title={label}
       aria-pressed={isActive}
       disabled={isDisabled}
-      onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
-      className={`grid size-10 place-items-center border transition-colors disabled:opacity-30 ${
-        isActive
-          ? "border-ink bg-ink text-on-brand"
-          : "border-transparent text-ink-muted hover:border-line hover:bg-surface-raised hover:text-ink"
+      className={`${SIDEBAR_ROW_CLASS} disabled:cursor-not-allowed disabled:opacity-35 ${
+        isActive ? SIDEBAR_ACTIVE_CLASS : SIDEBAR_IDLE_CLASS
       }`}
     >
-      <Icon name={icon} className="size-5" />
+      <Icon name={icon} className="size-5 shrink-0" />
+      <SidebarText isOpen={isOpen}>{label}</SidebarText>
     </button>
   );
 }
 
 export function Sidebar({
+  isOpen,
   isBlockLibraryOpen,
   isLocked,
   canUndo,
@@ -63,56 +72,60 @@ export function Sidebar({
   onRedo,
 }: SidebarProps) {
   return (
-    <nav
-      aria-label="Studio tools"
-      className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line bg-shell py-3"
-    >
+    <SidebarShell label="Menu" isOpen={isOpen}>
+      <SidebarSection isOpen={isOpen}>Menu</SidebarSection>
+
       <Link
         href={WORKFLOWS_PATH}
-        aria-label="Workflow templates"
-        title="Workflow templates"
-        className="grid size-10 place-items-center border border-transparent text-ink-muted transition-colors hover:border-line hover:bg-surface-raised hover:text-ink"
+        title="Templates"
+        className={`${SIDEBAR_ROW_CLASS} ${SIDEBAR_IDLE_CLASS}`}
       >
-        <LuWorkflow className="size-5" />
+        <LuWorkflow className="size-5 shrink-0" />
+        <SidebarText isOpen={isOpen}>Templates</SidebarText>
       </Link>
 
       <span
         aria-current="page"
         title="Studio"
-        className="grid size-10 place-items-center border border-ink bg-ink text-on-brand"
+        className={`${SIDEBAR_ROW_CLASS} ${SIDEBAR_ACTIVE_CLASS}`}
       >
-        <LuPencilRuler className="size-5" />
+        <LuPencilRuler className="size-5 shrink-0" />
+        <SidebarText isOpen={isOpen}>Studio</SidebarText>
       </span>
 
-      <span className="my-1 h-px w-6 bg-line" />
+      <SidebarSection isOpen={isOpen}>Tools</SidebarSection>
 
-      <RailButton
+      <SidebarButton
         icon="addBlocks"
         label="Add a block"
+        isOpen={isOpen}
         isActive={isBlockLibraryOpen}
         onClick={onToggleBlockLibrary}
       />
-      <RailButton
+      <SidebarButton
         icon="undo"
         label="Undo"
+        isOpen={isOpen}
         isDisabled={!canUndo}
         onClick={onUndo}
       />
-      <RailButton
+      <SidebarButton
         icon="redo"
         label="Redo"
+        isOpen={isOpen}
         isDisabled={!canRedo}
         onClick={onRedo}
       />
 
-      <span className="mt-auto">
-        <RailButton
+      <div className="mt-auto">
+        <SidebarButton
           icon={isLocked ? "lock" : "unlock"}
           label={isLocked ? "Unlock canvas" : "Lock canvas"}
+          isOpen={isOpen}
           isActive={isLocked}
           onClick={onToggleLock}
         />
-      </span>
-    </nav>
+      </div>
+    </SidebarShell>
   );
 }

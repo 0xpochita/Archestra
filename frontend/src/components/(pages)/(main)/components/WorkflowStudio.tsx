@@ -1,15 +1,17 @@
 "use client";
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { useState } from "react";
+import { AppBar } from "@/components/ui/AppBar";
 import { Icon } from "@/components/ui/Icon";
-import { WORKFLOW_UPDATED_LABEL } from "../constants";
+import { popoverVariants } from "@/components/ui/motion";
+import { BREADCRUMB_TRAIL, WORKFLOW_UPDATED_LABEL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
 import { AiWorkflowModal } from "./AiWorkflowModal";
 import { BlockDock } from "./BlockDock";
 import { BlockLibraryModal } from "./BlockLibraryModal";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { InspectorPanel } from "./InspectorPanel";
-import { popoverVariants } from "./motion";
 import { Sidebar } from "./Sidebar";
 import { SimulationModal } from "./SimulationModal";
 import { StrategyTemplateModal } from "./StrategyTemplateModal";
@@ -18,11 +20,18 @@ import { WorkflowTitle } from "./WorkflowTitle";
 
 export function WorkflowStudio() {
   const studio = useWorkflowStudio();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
     <MotionConfig reducedMotion="user">
+      <AppBar
+        trail={BREADCRUMB_TRAIL}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
+      />
       <div className="flex min-h-0 flex-1">
         <Sidebar
+          isOpen={isSidebarOpen}
           isBlockLibraryOpen={studio.isBlockLibraryOpen}
           isLocked={studio.isLocked}
           canUndo={studio.canUndo}
