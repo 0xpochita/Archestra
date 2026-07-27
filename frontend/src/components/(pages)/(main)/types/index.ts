@@ -1,3 +1,5 @@
+import type { LogoImage, LogoName } from "@/types/logo";
+
 export type BlockKind =
   | "trigger"
   | "approve"
@@ -26,6 +28,7 @@ export type IconName =
   | "plus"
   | "minus"
   | "fit"
+  | "target"
   | "lock"
   | "unlock"
   | "undo"
@@ -43,45 +46,6 @@ export type IconName =
   | "check"
   | "loader"
   | "search";
-
-export type LogoName =
-  | "aave"
-  | "uniswap"
-  | "curve"
-  | "chainlink"
-  | "ethereum"
-  | "telegram";
-
-export interface LogoShapeBase {
-  id: string;
-  fill: string;
-  fillRule?: "nonzero" | "evenodd";
-  fillOpacity?: number;
-}
-
-export interface LogoCircle extends LogoShapeBase {
-  kind: "circle";
-  cx: number;
-  cy: number;
-  r: number;
-}
-
-export interface LogoPath extends LogoShapeBase {
-  kind: "path";
-  d: string;
-}
-
-export type LogoShape = LogoCircle | LogoPath;
-
-export interface LogoImage {
-  src: string;
-  alt: string;
-}
-
-export interface LogoArtwork {
-  viewBox: string;
-  shapes: LogoShape[];
-}
 
 export interface BlockParam {
   id: string;
@@ -105,6 +69,7 @@ export interface StrategyTemplate {
   id: string;
   name: string;
   description: string;
+  tokens: LogoName[];
   kinds: BlockKind[];
 }
 
@@ -155,6 +120,12 @@ export interface EdgeGeometry {
 }
 
 export type NodeRunState = "running" | "success";
+
+export interface WorkflowDraft {
+  name: string;
+  version: number;
+  kinds: BlockKind[];
+}
 
 export type ChatRole = "user" | "assistant";
 

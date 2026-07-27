@@ -4,6 +4,8 @@ import {
   DEFAULT_PLAN,
   NODE_HEIGHT,
   NODE_WIDTH,
+  PIPELINE_ORDER,
+  PLAN_PREREQUISITES,
   PROMPT_RULES,
 } from "../constants";
 import type {
@@ -133,12 +135,32 @@ export function planBlocksFromPrompt(prompt: string): BlockKind[] {
     rule.keywords.some((keyword) => normalized.includes(keyword)),
   ).map((rule) => rule.kind);
 
-  return matched.length > 0 ? matched : DEFAULT_PLAN;
+  const planned = new Set<BlockKind>(
+    matched.length > 0 ? matched : DEFAULT_PLAN,
+  );
+  for (const kind of [...planned]) {
+    for (const prerequisite of PLAN_PREREQUISITES[kind] ?? []) {
+      planned.add(prerequisite);
+    }
+  }
+  planned.add("trigger");
+
+  return PIPELINE_ORDER.filter((kind) => planned.has(kind));
+}
+
+export function nameFromPlan(kinds: BlockKind[]): string {
+  const named = kinds.filter((kind) => kind !== "trigger");
+  const first = named.at(0);
+  const last = named.at(-1);
+  if (!first || !last) return "Untitled strategy";
+  if (first === last) return `${BLOCK_CATALOG[first].label} flow`;
+  return `${BLOCK_CATALOG[first].label} to ${BLOCK_CATALOG[last].label} flow`;
 }
 
 export function summarizePlan(kinds: BlockKind[]): string {
   const labels = kinds.map((kind) => BLOCK_CATALOG[kind].label);
-  return `Wired ${labels.length} blocks onto the canvas: ${labels.join(" then ")}. Check the amounts in the inspector before you run it.`;
+  const noun = labels.length === 1 ? "block" : "blocks";
+  return `Drafted ${labels.length} ${noun}: ${labels.join(" then ")}. Accept the workflow to drop it on the canvas, or ask for changes.`;
 }
 
 function toConfigKey(label: string): string {

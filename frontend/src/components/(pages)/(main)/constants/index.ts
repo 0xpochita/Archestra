@@ -27,6 +27,8 @@ export const NEW_NODE_STAGGER = 28;
 
 export const INITIAL_VIEWPORT = { x: 48, y: 40, zoom: 0.82 };
 
+export const ARCHESTRA_LOGO_SRC =
+  "/assets/images/logo/logo-brands/logo-archestra.png";
 export const ARC_LOGO_SRC = "/assets/images/logo/logo-chain/arc-logo.jpg";
 export const USDC_LOGO_SRC = "/assets/images/logo/logo-token/usdc-logo.svg";
 
@@ -255,30 +257,35 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     id: "stable-auto-compound",
     name: "Stablecoin auto-compound",
     description: "Supply USDC, farm the pair and reinvest rewards daily.",
+    tokens: ["usdc"],
     kinds: ["approve", "deposit", "yield", "harvest"],
   },
   {
     id: "weekly-dca",
     name: "Weekly ETH accumulation",
     description: "Swap a fixed amount into ETH every week and report it.",
+    tokens: ["usdc", "ethereum"],
     kinds: ["trigger", "swap", "alert"],
   },
   {
     id: "cross-chain-yield",
     name: "Cross-chain yield hop",
     description: "Bridge idle stables to Arc, then park them in a vault.",
+    tokens: ["usdc"],
     kinds: ["bridge", "approve", "deposit", "yield"],
   },
   {
     id: "guarded-exit",
     name: "Guarded farm exit",
     description: "Watch pool APY and unwind the position when it drops.",
+    tokens: ["usdc", "ethereum"],
     kinds: ["condition", "harvest", "withdraw", "alert"],
   },
   {
     id: "lp-bootstrap",
     name: "LP bootstrap",
     description: "Split a stable balance into a pair and stake the position.",
+    tokens: ["usdc", "ethereum"],
     kinds: ["approve", "swap", "yield"],
   },
 ];
@@ -296,6 +303,29 @@ export const PROMPT_RULES: { keywords: string[]; kind: BlockKind }[] = [
 ];
 
 export const DEFAULT_PLAN: BlockKind[] = ["deposit", "swap", "yield"];
+
+export const PIPELINE_ORDER: BlockKind[] = [
+  "trigger",
+  "bridge",
+  "approve",
+  "deposit",
+  "swap",
+  "yield",
+  "harvest",
+  "withdraw",
+  "condition",
+  "alert",
+];
+
+export const PLAN_PREREQUISITES: Partial<Record<BlockKind, BlockKind[]>> = {
+  deposit: ["approve"],
+  swap: ["approve"],
+  yield: ["approve", "deposit", "harvest"],
+  harvest: ["yield"],
+  withdraw: ["harvest"],
+  bridge: ["approve"],
+  condition: ["alert"],
+};
 
 export const AI_SUGGESTIONS = [
   "Auto-compound my USDC yield",
