@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
+import { LANDING_PATH } from "@/constants/assets";
 import { TemplateGallery } from "./components/TemplateGallery";
 import { WorkflowsSidebar } from "./components/WorkflowsSidebar";
 import { BREADCRUMB_TRAIL } from "./constants";
@@ -13,6 +14,7 @@ export function WorkflowsPage() {
     <div className="flex h-svh flex-col overflow-hidden bg-shell text-ink">
       <AppBar
         trail={BREADCRUMB_TRAIL}
+        brandHref={LANDING_PATH}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
       />

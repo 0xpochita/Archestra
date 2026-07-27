@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
 import { Icon } from "@/components/ui/Icon";
 import { popoverVariants } from "@/components/ui/motion";
+import { WORKFLOWS_PATH } from "@/constants/assets";
 import { BREADCRUMB_TRAIL, WORKFLOW_UPDATED_LABEL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
 import { AiWorkflowModal } from "./AiWorkflowModal";
@@ -26,6 +27,7 @@ export function WorkflowStudio() {
     <MotionConfig reducedMotion="user">
       <AppBar
         trail={BREADCRUMB_TRAIL}
+        brandHref={WORKFLOWS_PATH}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
       />

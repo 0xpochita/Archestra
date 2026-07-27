@@ -10,11 +10,17 @@ import { Icon } from "./Icon";
 
 interface AppBarProps {
   trail: string[];
+  brandHref: string;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
 }
 
-export function AppBar({ trail, isSidebarOpen, onToggleSidebar }: AppBarProps) {
+export function AppBar({
+  trail,
+  brandHref,
+  isSidebarOpen,
+  onToggleSidebar,
+}: AppBarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-3">
       <button
@@ -28,10 +34,7 @@ export function AppBar({ trail, isSidebarOpen, onToggleSidebar }: AppBarProps) {
         <Icon name="panel" className="size-4" />
       </button>
 
-      <Link
-        href={WORKFLOWS_PATH}
-        className="flex shrink-0 items-center gap-2.5"
-      >
+      <Link href={brandHref} className="flex shrink-0 items-center gap-2.5">
         <Image
           src={ARCHESTRA_LOGO_SRC}
           alt="Archestra"
