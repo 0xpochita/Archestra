@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { useEffect, useId } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { backdropVariants, panelVariants } from "@/components/ui/motion";
 import type { BlockKind } from "../types";
 import { BlockLibrary } from "./BlockLibrary";
-import { backdropVariants, panelVariants } from "./motion";
 
 interface BlockLibraryModalProps {
   isLocked: boolean;

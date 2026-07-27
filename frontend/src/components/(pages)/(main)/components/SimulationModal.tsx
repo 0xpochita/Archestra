@@ -3,9 +3,13 @@
 import { motion } from "framer-motion";
 import { useEffect, useId } from "react";
 import { Icon } from "@/components/ui/Icon";
+import {
+  backdropVariants,
+  itemVariants,
+  panelVariants,
+} from "@/components/ui/motion";
 import { BLOCK_CATALOG } from "../constants";
 import type { WorkflowNode } from "../types";
-import { backdropVariants, itemVariants, panelVariants } from "./motion";
 
 interface SimulationModalProps {
   workflowName: string;

@@ -4,11 +4,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
+import { itemVariants, popoverVariants } from "@/components/ui/motion";
 import type { LogoName } from "@/types/logo";
 import { STRATEGY_TEMPLATES } from "../constants";
 import type { StrategyTemplate } from "../types";
 import { BlockGlyph } from "./BlockGlyph";
-import { itemVariants, popoverVariants } from "./motion";
 
 const MIN_NAME_SIZE = 10;
 

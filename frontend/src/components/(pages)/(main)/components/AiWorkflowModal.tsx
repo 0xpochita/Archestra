@@ -4,9 +4,13 @@ import { motion } from "framer-motion";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
+import {
+  backdropVariants,
+  itemVariants,
+  panelVariants,
+} from "@/components/ui/motion";
 import { AI_GREETING, AI_SUGGESTIONS, BLOCK_CATALOG } from "../constants";
 import type { ChatMessage, WorkflowDraft } from "../types";
-import { backdropVariants, itemVariants, panelVariants } from "./motion";
 
 interface AiWorkflowModalProps {
   messages: ChatMessage[];
