@@ -3,7 +3,7 @@
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { WORKFLOW_UPDATED_LABEL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
-import { AiPromptBar } from "./AiPromptBar";
+import { AiWorkflowModal } from "./AiWorkflowModal";
 import { BlockDock } from "./BlockDock";
 import { BlockLibraryModal } from "./BlockLibraryModal";
 import { CanvasToolbar } from "./CanvasToolbar";
@@ -93,7 +93,9 @@ export function WorkflowStudio() {
                   zoom={studio.viewport.zoom}
                   onZoomIn={() => studio.zoomBy(studio.zoomStep)}
                   onZoomOut={() => studio.zoomBy(-studio.zoomStep)}
+                  onZoomTo={studio.zoomTo}
                   onFitView={studio.fitView}
+                  onCenterView={studio.centerView}
                 />
               </div>
 
@@ -107,18 +109,6 @@ export function WorkflowStudio() {
                     onToggleTemplateMenu={studio.toggleTemplateMenu}
                   />
                 </div>
-                <AnimatePresence>
-                  {studio.isAssistantOpen ? (
-                    <div key="assistant" className="pointer-events-auto">
-                      <AiPromptBar
-                        messages={studio.messages}
-                        isThinking={studio.isThinking}
-                        onSubmit={studio.sendPrompt}
-                        onClose={studio.closeAssistant}
-                      />
-                    </div>
-                  ) : null}
-                </AnimatePresence>
               </div>
 
               <AnimatePresence>
@@ -153,6 +143,21 @@ export function WorkflowStudio() {
             ) : null}
           </div>
         </div>
+
+        <AnimatePresence>
+          {studio.isAssistantOpen ? (
+            <AiWorkflowModal
+              key="assistant"
+              messages={studio.messages}
+              isThinking={studio.isThinking}
+              draft={studio.draft}
+              onSubmit={studio.sendPrompt}
+              onAccept={studio.acceptDraft}
+              onClear={studio.clearAssistant}
+              onClose={studio.closeAssistant}
+            />
+          ) : null}
+        </AnimatePresence>
 
         <AnimatePresence>
           {studio.isTemplateMenuOpen ? (

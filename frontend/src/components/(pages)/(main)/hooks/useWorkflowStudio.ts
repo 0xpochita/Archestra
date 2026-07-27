@@ -25,6 +25,7 @@ import type {
   NodeRunState,
   StrategyTemplate,
   Viewport,
+  WorkflowDraft,
   WorkflowGraph,
 } from "../types";
 import {
@@ -33,6 +34,7 @@ import {
   createNode,
   getExecutionOrder,
   getGraphBounds,
+  nameFromPlan,
   planBlocksFromPrompt,
   summarizePlan,
 } from "../utils";
@@ -74,6 +76,7 @@ export function useWorkflowStudio() {
   const [runState, setRunState] = useState<Record<string, NodeRunState>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [draft, setDraft] = useState<WorkflowDraft | null>(null);
   const [simulation, setSimulation] = useState<SimulationState | null>(null);
   const [workflowName, setWorkflowName] = useState(WORKFLOW_NAME);
 
@@ -290,6 +293,24 @@ export function useWorkflowStudio() {
     });
   };
 
+  const centerView = () => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const bounds = getGraphBounds(graph.nodes);
+    if (!rect || bounds.width === 0 || bounds.height === 0) return;
+    setViewport((current) => ({
+      ...current,
+      x:
+        (rect.width - bounds.width * current.zoom) / 2 -
+        bounds.x * current.zoom,
+      y:
+        (rect.height - bounds.height * current.zoom) / 2 -
+        bounds.y * current.zoom,
+    }));
+  };
+
+  const zoomTo = (zoom: number) =>
+    zoomBy(clamp(zoom, ZOOM_MIN, ZOOM_MAX) - viewport.zoom);
+
   const runWorkflow = () => {
     if (isRunning || graph.nodes.length === 0) return;
     runOrderRef.current = getExecutionOrder(graph);
@@ -306,14 +327,34 @@ export function useWorkflowStudio() {
     ]);
     setIsThinking(true);
     thinkingTimerRef.current = window.setTimeout(() => {
-      const plan = planBlocksFromPrompt(question);
-      addBlockChain(plan);
+      const kinds = planBlocksFromPrompt(question);
+      setDraft((current) => ({
+        name: nameFromPlan(kinds),
+        version: (current?.version ?? 0) + 1,
+        kinds,
+      }));
       setMessages((current) => [
         ...current,
-        { id: nextId("message"), role: "assistant", text: summarizePlan(plan) },
+        {
+          id: nextId("message"),
+          role: "assistant",
+          text: summarizePlan(kinds),
+        },
       ]);
       setIsThinking(false);
     }, AI_RESPONSE_DELAY_MS);
+  };
+
+  const acceptDraft = () => {
+    if (!draft) return;
+    const created = draft.kinds.map((kind, index) =>
+      createNode(kind, nextId("node"), 60 + index * CHAIN_SPACING, 300),
+    );
+
+    commit(() => ({ nodes: created, edges: buildChainEdges(created) }));
+    setWorkflowName(draft.name);
+    setSelectedNodeId(null);
+    setIsAssistantOpen(false);
   };
 
   useEffect(() => {
@@ -388,6 +429,7 @@ export function useWorkflowStudio() {
     isSimulationOpen: simulation !== null,
     simulationCompleted: simulation?.completed ?? 0,
     simulationSteps,
+    draft,
     isLocked,
     isRunning,
     isThinking,
@@ -400,8 +442,10 @@ export function useWorkflowStudio() {
     addBlock,
     addParam,
     beginHistoryEntry,
+    centerView,
     fitView,
     loadStrategy,
+    zoomTo,
     moveNode,
     panBy,
     redo,
@@ -415,6 +459,11 @@ export function useWorkflowStudio() {
       setSelectedNodeId(id);
       setIsTemplateMenuOpen(false);
       setIsBlockLibraryOpen(true);
+    },
+    acceptDraft,
+    clearAssistant: () => {
+      setMessages([]);
+      setDraft(null);
     },
     closeAssistant: () => setIsAssistantOpen(false),
     openAssistant: () => setIsAssistantOpen(true),

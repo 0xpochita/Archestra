@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/ui/Logo";
 import { BLOCK_CATALOG, STRATEGY_TEMPLATES } from "../constants";
 import type { StrategyTemplate } from "../types";
 import { Icon } from "./Icon";
@@ -97,6 +98,15 @@ export function WorkflowTitle({
                   onClick={() => handleSelect(template)}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-hover"
                 >
+                  <span className="flex shrink-0 -space-x-2">
+                    {template.tokens.map((token) => (
+                      <Logo
+                        key={`${template.id}-${token}`}
+                        name={token}
+                        className="size-7 rounded-full border-2 border-surface"
+                      />
+                    ))}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-ink">
                       {template.name}
