@@ -1,4 +1,4 @@
-import type { IconName } from "../types";
+import type { IconName } from "@/types/icon";
 
 const ICON_PATHS: Record<IconName, string[]> = {
   bolt: ["M13 2 4 14h6l-1 8 9-12h-6l1-8Z"],

@@ -1,13 +1,13 @@
 "use client";
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { Icon } from "@/components/ui/Icon";
 import { WORKFLOW_UPDATED_LABEL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
 import { AiWorkflowModal } from "./AiWorkflowModal";
 import { BlockDock } from "./BlockDock";
 import { BlockLibraryModal } from "./BlockLibraryModal";
 import { CanvasToolbar } from "./CanvasToolbar";
-import { Icon } from "./Icon";
 import { InspectorPanel } from "./InspectorPanel";
 import { popoverVariants } from "./motion";
 import { Sidebar } from "./Sidebar";
@@ -39,6 +39,7 @@ export function WorkflowStudio() {
           <div className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-shell px-4">
             <WorkflowTitle
               name={studio.workflowName}
+              tokens={studio.workflowTokens}
               onNameChange={studio.setWorkflowName}
               onSelectStrategy={studio.loadStrategy}
             />

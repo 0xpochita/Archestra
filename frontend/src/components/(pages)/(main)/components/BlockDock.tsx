@@ -1,8 +1,8 @@
 "use client";
 
+import { Icon } from "@/components/ui/Icon";
 import { ALL_BLOCK_ORDER, BLOCK_CATALOG, DOCK_BLOCK_ORDER } from "../constants";
 import type { BlockKind } from "../types";
-import { Icon } from "./Icon";
 
 interface BlockDockProps {
   usedKinds: BlockKind[];

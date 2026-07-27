@@ -1,9 +1,9 @@
 "use client";
 
 import { useId } from "react";
+import { Icon } from "@/components/ui/Icon";
+import type { IconName } from "@/types/icon";
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from "../constants";
-import type { IconName } from "../types";
-import { Icon } from "./Icon";
 
 interface CanvasToolbarProps {
   zoom: number;

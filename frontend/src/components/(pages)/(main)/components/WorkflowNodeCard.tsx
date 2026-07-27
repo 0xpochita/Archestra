@@ -3,10 +3,10 @@
 import Image from "next/image";
 import type { PointerEvent } from "react";
 import { BlockCardBody } from "@/components/ui/BlockCardBody";
+import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { BLOCK_CATALOG, NODE_HEIGHT, NODE_WIDTH } from "../constants";
 import type { NodeRunState, WorkflowNode } from "../types";
-import { Icon } from "./Icon";
 
 interface WorkflowNodeCardProps {
   node: WorkflowNode;

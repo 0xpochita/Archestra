@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { BLOCK_CATALOG } from "../constants";
 import type { BlockParam, WorkflowNode } from "../types";
 import { getOutputRows, toConfigLines } from "../utils";
-import { Icon } from "./Icon";
 
 type InspectorTab = "input" | "output";
 

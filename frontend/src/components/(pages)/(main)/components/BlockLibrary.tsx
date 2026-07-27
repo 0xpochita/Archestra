@@ -1,9 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import type { BlockGroup, BlockKind } from "../types";
 import { getBlockGroups } from "../utils";
-import { Icon } from "./Icon";
 
 interface BlockLibraryProps {
   isLocked: boolean;

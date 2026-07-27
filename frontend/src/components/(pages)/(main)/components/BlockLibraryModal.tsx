@@ -2,9 +2,9 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useId } from "react";
+import { Icon } from "@/components/ui/Icon";
 import type { BlockKind } from "../types";
 import { BlockLibrary } from "./BlockLibrary";
-import { Icon } from "./Icon";
 import { backdropVariants, panelVariants } from "./motion";
 
 interface BlockLibraryModalProps {
