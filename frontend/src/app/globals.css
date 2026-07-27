@@ -60,14 +60,7 @@
     var(--color-canvas-dot) 1px,
     transparent 1.6px
   );
-}
-
-.builder-grid {
-  background-color: var(--color-canvas);
-  background-image:
-    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
-  background-size: 64px 64px;
+  background-size: 30px 30px;
 }
 
 .scroll-slim::-webkit-scrollbar {

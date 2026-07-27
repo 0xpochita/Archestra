@@ -9,7 +9,7 @@ export function LandingPage() {
     <div className="min-h-svh bg-shell text-ink">
       <LandingNav />
       <main className="px-6 pb-20 lg:px-12">
-        <div className="builder-grid border border-line py-10">
+        <div className="workflow-grid border border-line py-10">
           <HeroFlow />
         </div>
         <div className="grid items-start gap-10 pt-8 pb-16 lg:grid-cols-[1.4fr_1fr] lg:pt-10 lg:pb-20">
