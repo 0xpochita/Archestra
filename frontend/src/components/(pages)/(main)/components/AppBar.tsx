@@ -1,13 +1,22 @@
 import Image from "next/image";
-import { ARC_LOGO_SRC, BREADCRUMB_TRAIL } from "../constants";
+import {
+  ARC_LOGO_SRC,
+  ARCHESTRA_LOGO_SRC,
+  BREADCRUMB_TRAIL,
+} from "../constants";
 import { Icon } from "./Icon";
 
 export function AppBar() {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-4">
-      <span className="grid size-8 place-items-center rounded-xl bg-brand/10 text-brand">
-        <Icon name="bolt" className="size-4" />
-      </span>
+      <Image
+        src={ARCHESTRA_LOGO_SRC}
+        alt="Archestra"
+        width={32}
+        height={32}
+        priority
+        className="size-8 shrink-0"
+      />
 
       <nav aria-label="Breadcrumb" className="min-w-0">
         <ol className="flex items-center gap-2 text-sm">
