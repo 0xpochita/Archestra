@@ -1,6 +1,8 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { LogoName } from "@/types/logo";
 import {
   AI_RESPONSE_DELAY_MS,
   FIT_PADDING,
@@ -13,7 +15,9 @@ import {
   NODE_WIDTH,
   RUN_STEP_DURATION_MS,
   SIMULATION_STEP_MS,
+  STRATEGY_TEMPLATES,
   WORKFLOW_NAME,
+  WORKFLOW_TOKENS,
   ZOOM_MAX,
   ZOOM_MIN,
   ZOOM_STEP,
@@ -63,6 +67,10 @@ export function useWorkflowStudio() {
   const sequenceRef = useRef(INITIAL_NODES.length);
   const runOrderRef = useRef<string[]>([]);
   const thinkingTimerRef = useRef<number | null>(null);
+  const appliedTemplateRef = useRef(false);
+  const loadStrategyRef = useRef<(template: StrategyTemplate) => void>(
+    () => {},
+  );
 
   const [history, setHistory] = useState<HistoryState>(INITIAL_HISTORY);
   const [viewport, setViewport] = useState<Viewport>(INITIAL_VIEWPORT);
@@ -79,6 +87,8 @@ export function useWorkflowStudio() {
   const [draft, setDraft] = useState<WorkflowDraft | null>(null);
   const [simulation, setSimulation] = useState<SimulationState | null>(null);
   const [workflowName, setWorkflowName] = useState(WORKFLOW_NAME);
+  const [workflowTokens, setWorkflowTokens] =
+    useState<LogoName[]>(WORKFLOW_TOKENS);
 
   const graph = history.present;
   const selectedNode =
@@ -190,6 +200,7 @@ export function useWorkflowStudio() {
 
     commit(() => ({ nodes: created, edges: buildChainEdges(created) }));
     setWorkflowName(template.name);
+    setWorkflowTokens(template.tokens);
     setSelectedNodeId(null);
   };
 
@@ -380,6 +391,19 @@ export function useWorkflowStudio() {
     return () => window.clearInterval(timer);
   }, [isRunning]);
 
+  const requestedTemplateId = useSearchParams().get("template");
+  loadStrategyRef.current = loadStrategy;
+
+  useEffect(() => {
+    if (!requestedTemplateId || appliedTemplateRef.current) return;
+    const template = STRATEGY_TEMPLATES.find(
+      (item) => item.id === requestedTemplateId,
+    );
+    if (!template) return;
+    appliedTemplateRef.current = true;
+    loadStrategyRef.current(template);
+  }, [requestedTemplateId]);
+
   const openSimulation = () => {
     if (graph.nodes.length === 0) return;
     setSimulation({ stepIds: getExecutionOrder(graph), completed: 0 });
@@ -436,6 +460,7 @@ export function useWorkflowStudio() {
     messages,
     runState,
     workflowName,
+    workflowTokens,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     zoomStep: ZOOM_STEP,

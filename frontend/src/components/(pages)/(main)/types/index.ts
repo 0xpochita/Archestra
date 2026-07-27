@@ -1,3 +1,4 @@
+import type { IconName } from "@/types/icon";
 import type { LogoImage, LogoName } from "@/types/logo";
 
 export type BlockKind =
@@ -11,41 +12,6 @@ export type BlockKind =
   | "withdraw"
   | "condition"
   | "alert";
-
-export type IconName =
-  | "bolt"
-  | "deposit"
-  | "swap"
-  | "yield"
-  | "harvest"
-  | "bridge"
-  | "withdraw"
-  | "approve"
-  | "condition"
-  | "alert"
-  | "play"
-  | "dots"
-  | "plus"
-  | "minus"
-  | "fit"
-  | "target"
-  | "lock"
-  | "unlock"
-  | "undo"
-  | "redo"
-  | "panel"
-  | "chevronDown"
-  | "pencil"
-  | "clock"
-  | "sparkle"
-  | "arrowUp"
-  | "trash"
-  | "close"
-  | "grid"
-  | "addBlocks"
-  | "check"
-  | "loader"
-  | "search";
 
 export interface BlockParam {
   id: string;

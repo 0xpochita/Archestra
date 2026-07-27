@@ -1,3 +1,5 @@
+import { ARC_LOGO_SRC, USDC_LOGO_SRC } from "@/constants/assets";
+import type { LogoName } from "@/types/logo";
 import type {
   BlockDefinition,
   BlockKind,
@@ -7,8 +9,10 @@ import type {
 } from "../types";
 
 export const WORKFLOW_NAME = "USDC Auto-Compound Strategy";
+export const WORKFLOW_TOKENS: LogoName[] = ["usdc"];
 export const WORKFLOW_UPDATED_LABEL = "Updated 24 minutes ago";
-export const BREADCRUMB_TRAIL = ["Archestra", "Workflows", WORKFLOW_NAME];
+export const BRAND_NAME = "Archestra";
+export const BREADCRUMB_TRAIL = ["Workflows", WORKFLOW_NAME];
 
 export const NODE_WIDTH = 300;
 export const NODE_HEIGHT = 72;
@@ -26,11 +30,6 @@ export const SIMULATION_STEP_MS = 700;
 export const NEW_NODE_STAGGER = 28;
 
 export const INITIAL_VIEWPORT = { x: 48, y: 40, zoom: 0.82 };
-
-export const ARCHESTRA_LOGO_SRC =
-  "/assets/images/logo/logo-brands/logo-archestra.png";
-export const ARC_LOGO_SRC = "/assets/images/logo/logo-chain/arc-logo.jpg";
-export const USDC_LOGO_SRC = "/assets/images/logo/logo-token/usdc-logo.svg";
 
 export const BLOCK_CATALOG: Record<BlockKind, BlockDefinition> = {
   trigger: {
@@ -280,6 +279,27 @@ export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
     description: "Watch pool APY and unwind the position when it drops.",
     tokens: ["usdc", "ethereum"],
     kinds: ["condition", "harvest", "withdraw", "alert"],
+  },
+  {
+    id: "idle-cash-sweep",
+    name: "Idle cash sweep",
+    description: "Sweep leftover USDC into the lending pool every night.",
+    tokens: ["usdc"],
+    kinds: ["trigger", "approve", "deposit"],
+  },
+  {
+    id: "reward-compounding-loop",
+    name: "Reward compounding loop",
+    description: "Claim rewards, swap them back to the pair and restake.",
+    tokens: ["usdc", "ethereum"],
+    kinds: ["harvest", "swap", "deposit", "yield"],
+  },
+  {
+    id: "risk-off-unwind",
+    name: "Risk-off unwind",
+    description: "Exit the farm, bridge home and report when a guard trips.",
+    tokens: ["usdc"],
+    kinds: ["condition", "withdraw", "bridge", "alert"],
   },
   {
     id: "lp-bootstrap",
