@@ -27,7 +27,7 @@ export function TemplateGallery() {
   );
 
   return (
-    <div className="scroll-slim flex-1 overflow-y-auto px-6 py-8 lg:px-10">
+    <div className="scroll-slim flex-1 overflow-y-auto bg-shell px-6 py-8 lg:px-10">
       <div className="flex flex-wrap items-center gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold tracking-tight text-ink">

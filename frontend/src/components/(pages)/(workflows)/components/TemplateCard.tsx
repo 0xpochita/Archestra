@@ -22,7 +22,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
       href={`${STUDIO_PATH}?template=${template.id}`}
       className="group flex flex-col border border-line bg-surface transition-shadow hover:shadow-md"
     >
-      <div className="builder-grid flex flex-1 flex-wrap items-center justify-center border-b border-line p-6">
+      <div className="workflow-grid flex flex-1 flex-wrap items-center justify-center border-b border-line p-6">
         {template.kinds.map((kind, index) => (
           <Fragment key={`${template.id}-${kind}`}>
             {index > 0 ? (
