@@ -1,7 +1,10 @@
 "use client";
 
-import type { IconName } from "../types";
-import { Icon } from "./Icon";
+import Link from "next/link";
+import { LuWorkflow } from "react-icons/lu";
+import { Icon } from "@/components/ui/Icon";
+import { WORKFLOWS_PATH } from "@/constants/assets";
+import type { IconName } from "@/types/icon";
 
 interface SidebarProps {
   isBlockLibraryOpen: boolean;
@@ -68,6 +71,17 @@ export function Sidebar({
       aria-label="Studio tools"
       className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line bg-shell py-3"
     >
+      <Link
+        href={WORKFLOWS_PATH}
+        aria-label="Workflow templates"
+        title="Workflow templates"
+        className="grid size-10 place-items-center border border-transparent text-ink-muted transition-colors hover:border-line hover:bg-surface-raised hover:text-ink"
+      >
+        <LuWorkflow className="size-5" />
+      </Link>
+
+      <span className="my-1 h-px w-6 bg-line" />
+
       <RailButton
         icon="addBlocks"
         label="Block library"

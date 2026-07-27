@@ -1,22 +1,31 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Icon } from "@/components/ui/Icon";
 import {
   ARC_LOGO_SRC,
   ARCHESTRA_LOGO_SRC,
-  BREADCRUMB_TRAIL,
-} from "../constants";
-import { Icon } from "./Icon";
+  WORKFLOWS_PATH,
+} from "@/constants/assets";
+import { BRAND_NAME, BREADCRUMB_TRAIL } from "../constants";
 
 export function AppBar() {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-4">
-      <Image
-        src={ARCHESTRA_LOGO_SRC}
-        alt="Archestra"
-        width={32}
-        height={32}
-        priority
-        className="size-8 shrink-0"
-      />
+      <Link href="/" className="flex shrink-0 items-center gap-2.5">
+        <Image
+          src={ARCHESTRA_LOGO_SRC}
+          alt="Archestra"
+          width={32}
+          height={32}
+          priority
+          className="size-8"
+        />
+        <span className="text-sm font-semibold tracking-tight text-ink">
+          {BRAND_NAME}
+        </span>
+      </Link>
+
+      <span className="h-6 w-px shrink-0 bg-line" />
 
       <nav aria-label="Breadcrumb" className="min-w-0">
         <ol className="flex items-center gap-2 text-sm">
@@ -30,12 +39,18 @@ export function AppBar() {
                     className="size-3.5 -rotate-90 text-ink-subtle"
                   />
                 ) : null}
-                <span
-                  aria-current={isLast ? "page" : undefined}
-                  className={`truncate ${isLast ? "text-ink" : "text-ink-subtle"}`}
-                >
-                  {crumb}
-                </span>
+                {isLast ? (
+                  <span aria-current="page" className="truncate text-ink">
+                    {crumb}
+                  </span>
+                ) : (
+                  <Link
+                    href={WORKFLOWS_PATH}
+                    className="truncate text-ink-subtle transition-colors hover:text-ink"
+                  >
+                    {crumb}
+                  </Link>
+                )}
               </li>
             );
           })}
