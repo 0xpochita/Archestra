@@ -1,6 +1,10 @@
 import type { ComponentType } from "react";
 import { LuPencilRuler, LuWorkflow } from "react-icons/lu";
 
+export const SIDEBAR_LABEL = "Menu";
+
+export const BREADCRUMB_TRAIL = ["Workflows"];
+
 export const PAGE_TITLE = "Workflow templates";
 export const PAGE_SUBTITLE =
   "Pick a ready-made DeFi strategy, then tune the blocks in the studio.";
