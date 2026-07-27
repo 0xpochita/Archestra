@@ -1,8 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
-import { HERO_HEADLINE, HERO_SUPPORT, WORKFLOWS_PATH } from "../constants";
+import {
+  BRAND_LOGO_SRC,
+  HERO_HEADLINE,
+  HERO_SUPPORT,
+  WORKFLOWS_PATH,
+} from "../constants";
 
 const RISE = {
   hidden: { opacity: 0, y: 18 },
@@ -23,6 +29,13 @@ export function HeroIntro() {
         className="font-apple text-5xl leading-[1.05] font-semibold tracking-[-0.03em] text-ink lg:text-7xl"
       >
         {HERO_HEADLINE}
+        <Image
+          src={BRAND_LOGO_SRC}
+          alt=""
+          width={96}
+          height={96}
+          className="ml-3 inline-block size-[1.5em] translate-y-[-0.05em] align-middle"
+        />
       </motion.h1>
 
       <motion.p
