@@ -2,15 +2,11 @@
 
 import Image from "next/image";
 import type { PointerEvent } from "react";
-import {
-  BLOCK_CATALOG,
-  NODE_HEIGHT,
-  NODE_ICON_SIZE,
-  NODE_WIDTH,
-} from "../constants";
+import { BlockCardBody } from "@/components/ui/BlockCardBody";
+import { Logo } from "@/components/ui/Logo";
+import { BLOCK_CATALOG, NODE_HEIGHT, NODE_WIDTH } from "../constants";
 import type { NodeRunState, WorkflowNode } from "../types";
 import { Icon } from "./Icon";
-import { Logo } from "./Logo";
 
 interface WorkflowNodeCardProps {
   node: WorkflowNode;
@@ -113,56 +109,43 @@ export function WorkflowNodeCard({
         <Icon name="plus" className="size-3" strokeWidth={2.4} />
       </button>
 
-      <span
-        style={{ width: NODE_ICON_SIZE }}
-        className={`grid shrink-0 place-items-center border-r border-line ${
-          definition.logo || primaryLogo
-            ? "bg-surface text-ink"
-            : "bg-ink text-on-brand"
-        }`}
-      >
-        {primaryLogo ? (
-          <span className="relative">
-            <Image
-              src={primaryLogo.src}
-              alt={primaryLogo.alt}
-              width={36}
-              height={36}
-              className="size-9 rounded-full object-cover"
-            />
-            {badgeLogo ? (
+      <BlockCardBody
+        title={node.title}
+        subtitle={node.subtitle}
+        tile={
+          primaryLogo ? (
+            <span className="relative">
               <Image
-                src={badgeLogo.src}
-                alt={badgeLogo.alt}
-                width={20}
-                height={20}
-                className="absolute -right-1 -bottom-1 size-5 rounded-full border-2 border-surface object-cover"
+                src={primaryLogo.src}
+                alt={primaryLogo.alt}
+                width={36}
+                height={36}
+                className="size-9 rounded-full object-cover"
               />
-            ) : null}
-          </span>
-        ) : null}
-        {definition.logo ? (
-          <Logo name={definition.logo} className="size-8" />
-        ) : null}
-        {definition.logo || primaryLogo ? null : (
-          <Icon name={definition.icon} className="size-7" />
-        )}
-      </span>
-
-      <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-4">
-        <span className="truncate text-xs text-ink-subtle">
-          {node.subtitle}
-        </span>
-        <span className="truncate text-sm font-semibold text-ink">
-          {node.title}
-        </span>
-      </span>
-
-      {runState ? (
-        <span className="grid w-10 shrink-0 place-items-center">
-          <NodeStatus runState={runState} />
-        </span>
-      ) : null}
+              {badgeLogo ? (
+                <Image
+                  src={badgeLogo.src}
+                  alt={badgeLogo.alt}
+                  width={20}
+                  height={20}
+                  className="absolute -right-1 -bottom-1 size-5 rounded-full border-2 border-surface object-cover"
+                />
+              ) : null}
+            </span>
+          ) : definition.logo ? (
+            <Logo name={definition.logo} className="size-8" />
+          ) : (
+            <Icon name={definition.icon} className="size-7 text-ink" />
+          )
+        }
+        trailing={
+          runState ? (
+            <span className="grid w-10 shrink-0 place-items-center">
+              <NodeStatus runState={runState} />
+            </span>
+          ) : null
+        }
+      />
     </div>
   );
 }
