@@ -11,7 +11,6 @@ import type {
 export const WORKFLOW_NAME = "USDC Auto-Compound Strategy";
 export const WORKFLOW_TOKENS: LogoName[] = ["usdc"];
 export const WORKFLOW_UPDATED_LABEL = "Updated 24 minutes ago";
-export const BRAND_NAME = "Archestra";
 export const BREADCRUMB_TRAIL = ["Workflows", WORKFLOW_NAME];
 
 export const NODE_WIDTH = 300;

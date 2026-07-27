@@ -1,17 +1,37 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Icon } from "@/components/ui/Icon";
 import {
   ARC_LOGO_SRC,
   ARCHESTRA_LOGO_SRC,
+  BRAND_NAME,
   WORKFLOWS_PATH,
 } from "@/constants/assets";
-import { BRAND_NAME, BREADCRUMB_TRAIL } from "../constants";
+import { Icon } from "./Icon";
 
-export function AppBar() {
+interface AppBarProps {
+  trail: string[];
+  isSidebarOpen: boolean;
+  onToggleSidebar: () => void;
+}
+
+export function AppBar({ trail, isSidebarOpen, onToggleSidebar }: AppBarProps) {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-4">
-      <Link href="/" className="flex shrink-0 items-center gap-2.5">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-3">
+      <button
+        type="button"
+        aria-label={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
+        aria-pressed={isSidebarOpen}
+        title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
+        onClick={onToggleSidebar}
+        className="hidden size-9 shrink-0 place-items-center text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink lg:grid"
+      >
+        <Icon name="panel" className="size-4" />
+      </button>
+
+      <Link
+        href={WORKFLOWS_PATH}
+        className="flex shrink-0 items-center gap-2.5"
+      >
         <Image
           src={ARCHESTRA_LOGO_SRC}
           alt="Archestra"
@@ -29,8 +49,8 @@ export function AppBar() {
 
       <nav aria-label="Breadcrumb" className="min-w-0">
         <ol className="flex items-center gap-2 text-sm">
-          {BREADCRUMB_TRAIL.map((crumb, index) => {
-            const isLast = index === BREADCRUMB_TRAIL.length - 1;
+          {trail.map((crumb, index) => {
+            const isLast = index === trail.length - 1;
             return (
               <li key={crumb} className="flex min-w-0 items-center gap-2">
                 {index > 0 ? (

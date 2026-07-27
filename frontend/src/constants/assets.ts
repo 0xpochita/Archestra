@@ -1,3 +1,5 @@
+export const BRAND_NAME = "Archestra";
+
 export const ARCHESTRA_LOGO_SRC =
   "/assets/images/logo/logo-brands/logo-archestra.png";
 export const ARC_LOGO_SRC = "/assets/images/logo/logo-chain/arc-logo.jpg";
