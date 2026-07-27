@@ -2,20 +2,26 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
-import { BLOCK_CATALOG, STRATEGY_TEMPLATES } from "../constants";
+import type { LogoName } from "@/types/logo";
+import { STRATEGY_TEMPLATES } from "../constants";
 import type { StrategyTemplate } from "../types";
-import { Icon } from "./Icon";
+import { BlockGlyph } from "./BlockGlyph";
 import { itemVariants, popoverVariants } from "./motion";
+
+const MIN_NAME_SIZE = 10;
 
 interface WorkflowTitleProps {
   name: string;
+  tokens: LogoName[];
   onNameChange: (name: string) => void;
   onSelectStrategy: (template: StrategyTemplate) => void;
 }
 
 export function WorkflowTitle({
   name,
+  tokens,
   onNameChange,
   onSelectStrategy,
 }: WorkflowTitleProps) {
@@ -52,23 +58,34 @@ export function WorkflowTitle({
   return (
     <div
       ref={containerRef}
-      className="relative flex min-w-0 items-center gap-1"
+      className="relative flex min-w-0 items-center gap-2"
     >
+      <span className="flex shrink-0 -space-x-1.5">
+        {tokens.map((token) => (
+          <Logo
+            key={token}
+            name={token}
+            className="size-6 rounded-full border-2 border-shell"
+          />
+        ))}
+      </span>
+
       <label className="sr-only" htmlFor="workflow-name">
         Workflow name
       </label>
       <input
         id="workflow-name"
         value={name}
+        size={Math.max(name.length, MIN_NAME_SIZE)}
         onChange={(event) => onNameChange(event.target.value)}
-        className="min-w-0 max-w-md flex-1 bg-transparent text-lg font-semibold text-ink outline-none"
+        className="min-w-0 max-w-full bg-transparent text-lg font-semibold text-ink outline-none"
       />
       <button
         type="button"
         aria-label="Switch strategy"
         aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="grid size-8 shrink-0 place-items-center text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink"
+        className="grid size-8 shrink-0 place-items-center border border-line bg-surface text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink"
       >
         <Icon
           name="chevronDown"
@@ -119,12 +136,9 @@ export function WorkflowTitle({
                     {template.kinds.map((kind) => (
                       <span
                         key={`${template.id}-${kind}`}
-                        className="grid size-6 place-items-center border border-line bg-surface-raised text-ink"
+                        className="grid size-6 place-items-center border border-line bg-surface text-ink"
                       >
-                        <Icon
-                          name={BLOCK_CATALOG[kind].icon}
-                          className="size-3.5"
-                        />
+                        <BlockGlyph kind={kind} className="size-4" />
                       </span>
                     ))}
                   </span>

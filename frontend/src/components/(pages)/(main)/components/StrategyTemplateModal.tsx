@@ -2,9 +2,10 @@
 
 import { motion } from "framer-motion";
 import { Fragment, useEffect, useId } from "react";
-import { BLOCK_CATALOG, STRATEGY_TEMPLATES } from "../constants";
+import { Icon } from "@/components/ui/Icon";
+import { STRATEGY_TEMPLATES } from "../constants";
 import type { BlockKind } from "../types";
-import { Icon } from "./Icon";
+import { BlockGlyph } from "./BlockGlyph";
 import { backdropVariants, itemVariants, panelVariants } from "./motion";
 
 interface StrategyTemplateModalProps {
@@ -102,11 +103,8 @@ export function StrategyTemplateModal({
                           className="size-3 -rotate-90 text-ink-subtle"
                         />
                       ) : null}
-                      <span className="grid size-7 place-items-center border border-line bg-surface-raised text-ink">
-                        <Icon
-                          name={BLOCK_CATALOG[kind].icon}
-                          className="size-4"
-                        />
+                      <span className="grid size-7 place-items-center border border-line bg-surface text-ink">
+                        <BlockGlyph kind={kind} className="size-4.5" />
                       </span>
                     </Fragment>
                   ))}
