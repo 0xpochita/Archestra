@@ -75,7 +75,6 @@ export function useWorkflowStudio() {
   const [history, setHistory] = useState<HistoryState>(INITIAL_HISTORY);
   const [viewport, setViewport] = useState<Viewport>(INITIAL_VIEWPORT);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [isInspectorOpen, setIsInspectorOpen] = useState(true);
   const [isBlockLibraryOpen, setIsBlockLibraryOpen] = useState(false);
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -449,7 +448,6 @@ export function useWorkflowStudio() {
     isBlockLibraryOpen,
     isTemplateMenuOpen,
     isAssistantOpen,
-    isInspectorOpen,
     isSimulationOpen: simulation !== null,
     simulationCompleted: simulation?.completed ?? 0,
     simulationSteps,
@@ -511,7 +509,6 @@ export function useWorkflowStudio() {
       setIsBlockLibraryOpen(false);
       setIsTemplateMenuOpen((open) => !open);
     },
-    toggleInspector: () => setIsInspectorOpen((open) => !open),
     toggleLock: () => setIsLocked((locked) => !locked),
     undo,
     updateNodeText,

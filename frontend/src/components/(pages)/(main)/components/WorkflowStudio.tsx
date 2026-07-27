@@ -24,12 +24,10 @@ export function WorkflowStudio() {
       <div className="flex min-h-0 flex-1">
         <Sidebar
           isBlockLibraryOpen={studio.isBlockLibraryOpen}
-          isInspectorOpen={studio.isInspectorOpen}
           isLocked={studio.isLocked}
           canUndo={studio.canUndo}
           canRedo={studio.canRedo}
           onToggleBlockLibrary={studio.toggleBlockLibrary}
-          onToggleInspector={studio.toggleInspector}
           onToggleLock={studio.toggleLock}
           onUndo={studio.undo}
           onRedo={studio.redo}
@@ -131,10 +129,10 @@ export function WorkflowStudio() {
               </AnimatePresence>
             </section>
 
-            {studio.isInspectorOpen && studio.selectedNode ? (
+            {studio.selectedNode ? (
               <InspectorPanel
                 node={studio.selectedNode}
-                onClose={studio.toggleInspector}
+                onClose={() => studio.selectNode(null)}
                 onUpdateText={studio.updateNodeText}
                 onUpdateParam={studio.updateParam}
                 onAddParam={studio.addParam}

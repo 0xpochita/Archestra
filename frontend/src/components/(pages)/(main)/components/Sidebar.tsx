@@ -1,19 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { LuWorkflow } from "react-icons/lu";
+import { LuPencilRuler, LuWorkflow } from "react-icons/lu";
 import { Icon } from "@/components/ui/Icon";
 import { WORKFLOWS_PATH } from "@/constants/assets";
 import type { IconName } from "@/types/icon";
 
 interface SidebarProps {
   isBlockLibraryOpen: boolean;
-  isInspectorOpen: boolean;
   isLocked: boolean;
   canUndo: boolean;
   canRedo: boolean;
   onToggleBlockLibrary: () => void;
-  onToggleInspector: () => void;
   onToggleLock: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -56,12 +54,10 @@ function RailButton({
 
 export function Sidebar({
   isBlockLibraryOpen,
-  isInspectorOpen,
   isLocked,
   canUndo,
   canRedo,
   onToggleBlockLibrary,
-  onToggleInspector,
   onToggleLock,
   onUndo,
   onRedo,
@@ -80,19 +76,21 @@ export function Sidebar({
         <LuWorkflow className="size-5" />
       </Link>
 
+      <span
+        aria-current="page"
+        title="Studio"
+        className="grid size-10 place-items-center border border-ink bg-ink text-on-brand"
+      >
+        <LuPencilRuler className="size-5" />
+      </span>
+
       <span className="my-1 h-px w-6 bg-line" />
 
       <RailButton
         icon="addBlocks"
-        label="Block library"
+        label="Add a block"
         isActive={isBlockLibraryOpen}
         onClick={onToggleBlockLibrary}
-      />
-      <RailButton
-        icon="panel"
-        label="Inspector"
-        isActive={isInspectorOpen}
-        onClick={onToggleInspector}
       />
       <RailButton
         icon="undo"
