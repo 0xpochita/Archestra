@@ -1,5 +1,5 @@
-import { LOGO_ARTWORK } from "../constants/logos";
-import type { LogoName } from "../types";
+import type { LogoName } from "@/types/logo";
+import { LOGO_ARTWORK } from "./logo-artwork";
 
 interface LogoProps {
   name: LogoName;
