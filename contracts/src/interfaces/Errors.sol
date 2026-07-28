@@ -29,3 +29,5 @@ error InvalidFeedAnswer(int256 answer);
 error DeadlinePassed(uint64 deadline);
 /// @notice A contract that must end a run empty still holds tokens.
 error ResidualBalance(address token, uint256 amount);
+/// @notice A zero address was supplied where a real one is required.
+error ZeroAddress();

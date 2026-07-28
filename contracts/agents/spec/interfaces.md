@@ -123,6 +123,24 @@ interface IStrategyVault {
 
 `approveAdapter` is executor only, where the executor is resolved through `registry.executor()` at call time. `withdraw` is owner only and works while paused, in every reachable state.
 
+## 6b. IVaultFactory
+
+Standalone and immutable. Vault addresses depend only on the factory and its implementation, never on the registry.
+
+```solidity
+interface IVaultFactory {
+    event VaultCreated(address indexed owner, address indexed vault);
+
+    function createVault(address owner) external returns (address vault);
+    function vaultOf(address owner) external view returns (address vault);
+    function predictVault(address owner) external view returns (address vault);
+    function implementation() external view returns (address);
+    function registry() external view returns (address);
+}
+```
+
+`createVault` is idempotent and callable by anyone: it deploys the owner's canonical vault or returns the existing one. The clone salt is derived from the owner alone. `VaultCreated` is a factory local event, the indexer does not depend on it.
+
 ## 7. Events
 
 The backend indexer depends on these exactly.
@@ -164,4 +182,5 @@ error StaleFeed(uint256 updatedAt, uint256 maxStale);
 error InvalidFeedAnswer(int256 answer);
 error DeadlinePassed(uint64 deadline);
 error ResidualBalance(address token, uint256 amount);
+error ZeroAddress();
 ```

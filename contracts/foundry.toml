@@ -10,6 +10,7 @@ libs = ["lib"]
 
 [profile.ci.fuzz]
 runs = 10000
+seed = "0x1"
 
 [profile.ci.invariant]
 runs = 256
