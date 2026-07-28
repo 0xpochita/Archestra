@@ -66,7 +66,7 @@ Conventional Commits, same table as the backend. Extra rules:
 - Use `SafeERC20`. Never assume `transfer` returns a bool.
 - Approve exactly what is needed, then reset to zero after the call. Infinite approval is only allowed with an explicit written reason in the PR.
 - Validate every adapter target against an allow list held in the registry. An arbitrary `call` to a user supplied address is forbidden.
-- `delegatecall` is forbidden outside the upgrade proxy itself.
+- `delegatecall` is forbidden in any contract we write. The only delegatecall in the system is the EIP-1167 clone runtime, which is not our code.
 - No `tx.origin`. No `block.timestamp` as a randomness source.
 - Slippage and deadline are always caller supplied for swap and bridge steps. A default of zero slippage protection is a bug.
 - Price and APY reads come from a Chainlink feed with staleness and answer bound checks, never from a spot pool reserve.
@@ -88,7 +88,12 @@ Conventional Commits, same table as the backend. Extra rules:
 
 ## 8. Upgrades and Deployment
 
-- Phase 1 contracts are not upgradeable. If that changes, the choice of proxy pattern and the storage gap are decided in a PR before any code.
+- Decision (2026-07-29): no contract in this system is upgradeable. Iteration happens through redeploy and re-pointing, not proxies:
+  - `VaultFactory` is a separate, permanent, immutable contract. Vault addresses are CREATE2 derived from the owner and survive any registry or executor replacement.
+  - The registry holds a mutable `executor` address behind `DEFAULT_ADMIN_ROLE`. Replacing the executor is deploy plus `setExecutor`, not an upgrade.
+  - A registry defect is handled by redeploying the registry and reseeding it from the backend, which owns the source of truth for graphs. The reseed runbook is written during M5.
+- Rejected alternatives, do not re-propose without new facts: UUPS on registry or executor (same admin power as the pointer, more failure modes), BeaconProxy vaults (one key rewrites custody logic for every user at once), UUPS on clones (impossible, the ERC-1967 slot of a clone is empty).
+- Revisit trigger: mainnet, an external audit being scoped, or a second consumer hardcoding addresses. The pre-scoped fallback is UUPS on `WorkflowRegistry` only, with ERC-7201 namespaced storage, `_disableInitializers()` in the implementation constructor, and a storage layout diff gate in CI.
 - Deployment happens through a `script/Deploy*.s.sol` that is idempotent and reads addresses from environment variables.
 - Every deployment records address, commit hash, constructor arguments, and verification status in `deployments/<chain>.json`.
 - Contracts are verified on the explorer in the same session they are deployed.

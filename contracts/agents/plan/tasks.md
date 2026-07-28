@@ -19,12 +19,12 @@ Scope: `StepType`, `Step`, `Workflow`, and every `I*.sol` from `spec/interfaces.
 Accept: interfaces compile standalone. Encoding table documented in NatSpec on `Step`.
 
 ### SC-04 Vault factory
-Scope: minimal proxy factory, one `StrategyVault` per owner, deterministic address, `deposit`, `withdraw`, `approveAdapter`.
-Accept: a second `create` for the same owner reuses the vault. `withdraw` by a non owner reverts `NotOwner`. `approveAdapter` by a non executor reverts `NotExecutor`.
+Scope: standalone immutable `VaultFactory`, one `StrategyVault` clone per owner, CREATE2 address derived from the owner, `deposit`, `withdraw`, `approveAdapter`. The vault resolves the executor through `registry.executor()` and never stores it.
+Accept: a second `create` for the same owner reuses the vault. `withdraw` by a non owner reverts `NotOwner`. `approveAdapter` by a non executor reverts `NotExecutor`. The factory address is independent of the registry, so vault addresses survive a registry redeploy.
 
 ### SC-05 WorkflowRegistry
-Scope: create, update, `setActive`, get, adapter allow list keyed by `(adapter, stepType)`, `MAX_STEPS = 16`.
-Accept: 0 steps reverts `EmptyWorkflow`, 17 steps reverts `TooManySteps`, update during a run reverts. `WorkflowCreated` and `WorkflowUpdated` emitted with the right arguments.
+Scope: create, update, `setActive`, get, adapter allow list keyed by `(adapter, stepType)`, `MAX_STEPS = 16`, `executor` pointer with `setExecutor` under `DEFAULT_ADMIN_ROLE` emitting `ExecutorChanged`.
+Accept: 0 steps reverts `EmptyWorkflow`, 17 steps reverts `TooManySteps`, update during a run reverts. `WorkflowCreated` and `WorkflowUpdated` emitted with the right arguments. `setExecutor` by a non admin reverts.
 
 ## M2 - Vault and executor
 

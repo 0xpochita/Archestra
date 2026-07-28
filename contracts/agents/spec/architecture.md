@@ -29,6 +29,8 @@ Target chain: **Arc testnet**, USDC native. Assets in phase 1: USDC and WETH.
 
 `AutomationTrigger` sits beside the executor and is what a `trigger` block compiles to. It exposes a Chainlink Automation compatible `checkUpkeep` and `performUpkeep` pair.
 
+`VaultFactory` is its own permanent, immutable contract, separate from the registry. The registry calls it on a user's first `create`, and vault addresses are CREATE2 derived from the owner, so they survive a registry or executor replacement. Nothing in the system is upgradeable: see `agents/rules/rules.template.md` section 8 for the decision record.
+
 ## 2. Block kind to on chain action
 
 The ten kinds the studio renders map one to one onto step types. The mapping is the contract between the two teams.
@@ -53,6 +55,8 @@ The ten kinds the studio renders map one to one onto step types. The mapping is 
 - A `StrategyVault` is deployed per owner through a minimal proxy factory. The owner is the only address that can withdraw.
 - The executor never holds a balance between steps. Anything it receives inside one run is forwarded to the vault before the run ends, and a non zero executor balance at run end is an invariant violation.
 - The vault approves an adapter for one step, the adapter pulls, and the executor resets the allowance to zero in the same transaction.
+- A vault never stores the executor address. It resolves `registry.executor()` at call time, so replacing the executor never touches deployed vaults.
+- Trust statement, said plainly: the admin multisig can, subject to the timelock, point vaults at new executor code, and executor code can move vault funds through `approveAdapter`. The user's protection is that `withdraw` stays open in every state, including paused: the timelock delay is the exit window.
 
 ## 4. Execution model
 
@@ -80,6 +84,8 @@ Gas ceiling: a workflow is capped at `MAX_STEPS = 16`. The registry rejects long
 
 Pausing stops execution and new runs. Withdrawal from a vault stays open while paused, always.
 
+`DEFAULT_ADMIN_ROLE` and `CURATOR_ROLE` sit behind the multisig plus an OpenZeppelin `TimelockController`. The delay is zero on Arc testnet and is raised to 48 hours as a hard gate before any deployment that holds real value. `setExecutor` and allow list changes go through this path. `PAUSER_ROLE` stays hot on the team key and the monitor bot so pausing is never delayed.
+
 ## 6. Backend interaction
 
 The backend does not sign transactions in phase 1. The flow is:
@@ -89,3 +95,5 @@ The backend does not sign transactions in phase 1. The flow is:
 3. The backend indexes `StepExecuted` and `RunCompleted` events and fills `run_steps`, so the canvas progress in `backend/agents/spec/api.md` is the same stream whether the source is a mock or a chain.
 
 `ChainAdapter` in the backend is the seam. `MockChainAdapter` fakes hashes now, `ArcChainAdapter` reads these events later.
+
+The backend configures exactly one address: the registry. It resolves `executor()` with a view call at boot and treats an `ExecutorChanged` event as a config reload trigger. `deployments/arc-testnet.json` stays flat, with no proxy or implementation distinction. Historical run events remain valid at a replaced executor's address, so the indexer keys on `runId`, never on the emitting address.

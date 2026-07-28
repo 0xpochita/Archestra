@@ -61,10 +61,12 @@ interface IWorkflowRegistry {
     function setActive(uint256 workflowId, bool active) external;
     function get(uint256 workflowId) external view returns (Workflow memory);
     function isAdapterAllowed(address adapter, StepType stepType) external view returns (bool);
+    function executor() external view returns (address);
+    function setExecutor(address newExecutor) external;
 }
 ```
 
-Rules: `create` deploys the caller's vault on first use. `update` reverts while a run is in flight. `MAX_STEPS` is 16.
+Rules: `create` deploys the caller's vault on first use through the standalone `VaultFactory`. `update` reverts while a run is in flight. `MAX_STEPS` is 16. `setExecutor` is `DEFAULT_ADMIN_ROLE` only and emits `ExecutorChanged`. Vaults and modules resolve the executor through `executor()` and never store it.
 
 ## 3. IExecutor
 
@@ -119,7 +121,7 @@ interface IStrategyVault {
 }
 ```
 
-`approveAdapter` is executor only. `withdraw` is owner only and works while paused.
+`approveAdapter` is executor only, where the executor is resolved through `registry.executor()` at call time. `withdraw` is owner only and works while paused, in every reachable state.
 
 ## 7. Events
 
@@ -128,6 +130,7 @@ The backend indexer depends on these exactly.
 ```solidity
 event WorkflowCreated(uint256 indexed workflowId, address indexed owner, address vault, uint256 stepCount);
 event WorkflowUpdated(uint256 indexed workflowId, uint256 stepCount);
+event ExecutorChanged(address indexed previousExecutor, address indexed newExecutor);
 
 event RunStarted(bytes32 indexed runId, uint256 indexed workflowId, address indexed caller);
 event StepExecuted(

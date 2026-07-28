@@ -46,4 +46,6 @@ Exit: the studio's Run button produces a real transaction and the canvas lights 
 
 ## Out of scope for now
 
-Upgradeability, fee collection, multi owner vaults, partial run resumption, cross chain callbacks. Each one changes storage layout or trust assumptions, so each needs its own design PR.
+Fee collection, multi owner vaults, partial run resumption, cross chain callbacks. Each one changes storage layout or trust assumptions, so each needs its own design PR.
+
+Upgradeability is decided, not deferred: nothing is upgradeable, iteration happens through redeploy and re-pointing. See `agents/rules/rules.template.md` section 8 for the decision record and the revisit triggers.

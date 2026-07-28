@@ -28,6 +28,7 @@ Required cases per contract:
 - Every custom error in `interfaces.md` section 8 has a test asserting the selector.
 - Access control: a non owner, a non executor, and a random address each get the expected revert.
 - Paused system: execution reverts, vault withdrawal still works.
+- Executor swap: after `setExecutor`, the old executor can neither run workflows nor set allowances, and no allowance survives the swap.
 
 ## 3. Fuzz tests
 
@@ -50,6 +51,7 @@ Required cases per contract:
 | `INV-4` | A paused system executes zero steps. |
 | `INV-5` | Every `StepExecuted` position is unique inside one `runId` and strictly increasing. |
 | `INV-6` | A workflow never executes more steps than its stored step count. |
+| `INV-7` | `withdraw` by the vault owner succeeds in every reachable state, including paused and immediately after `setExecutor`. |
 
 ## 5. Security review checklist
 
@@ -67,6 +69,7 @@ Reviewed by a second person before merge, for every PR that touches `src/core` o
 - [ ] Every external function reverts before initialisation completes.
 - [ ] No new storage variable inserted above an existing one if any contract is proxied.
 - [ ] Events emitted for every state change the backend indexes.
+- [ ] The owner withdrawal path still works in every state the change introduces. `INV-7` has a test.
 
 ## 6. Fork tests
 
