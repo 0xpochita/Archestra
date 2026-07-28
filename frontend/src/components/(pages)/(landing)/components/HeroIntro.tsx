@@ -4,9 +4,11 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  ARC_LOGO_SRC,
   BRAND_LOGO_SRC,
   HERO_HEADLINE,
   HERO_SUPPORT,
+  HERO_SUPPORT_CHAIN,
   WORKFLOWS_PATH,
 } from "../constants";
 
@@ -44,6 +46,14 @@ export function HeroIntro() {
         className="mt-6 max-w-xl text-base leading-relaxed text-ink-muted"
       >
         {HERO_SUPPORT}
+        <Image
+          src={ARC_LOGO_SRC}
+          alt=""
+          width={24}
+          height={24}
+          className="mx-1.5 inline-block size-[1.15em] translate-y-[-0.1em] rounded-full align-middle"
+        />
+        {HERO_SUPPORT_CHAIN}
       </motion.p>
 
       <motion.div

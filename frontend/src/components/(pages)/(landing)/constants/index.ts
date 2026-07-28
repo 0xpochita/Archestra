@@ -1,4 +1,5 @@
 export {
+  ARC_LOGO_SRC,
   ARCHESTRA_LOGO_SRC as BRAND_LOGO_SRC,
   WORKFLOWS_PATH,
 } from "@/constants/assets";
@@ -13,7 +14,8 @@ import type {
 
 export const HERO_HEADLINE = "Automating complex DeFi strategies";
 export const HERO_SUPPORT =
-  "Compose deposits, swaps and yield farming as blocks, simulate the whole run, then ship it to Arc.";
+  "Compose deposits, swaps and yield farming as blocks, simulate the whole run, then ship it to";
+export const HERO_SUPPORT_CHAIN = "Arc.";
 
 export const NAV_LINKS: NavLink[] = [
   { label: "Product", hasMenu: true },
