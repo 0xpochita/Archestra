@@ -63,10 +63,11 @@ interface IWorkflowRegistry {
     function isAdapterAllowed(address adapter, StepType stepType) external view returns (bool);
     function executor() external view returns (address);
     function setExecutor(address newExecutor) external;
+    function setRunInFlight(uint256 workflowId, bool inFlight) external;
 }
 ```
 
-Rules: `create` deploys the caller's vault on first use through the standalone `VaultFactory`. `update` reverts while a run is in flight. `MAX_STEPS` is 16. `setExecutor` is `DEFAULT_ADMIN_ROLE` only and emits `ExecutorChanged`. Vaults and modules resolve the executor through `executor()` and never store it.
+Rules: `create` deploys the caller's vault on first use through the standalone `VaultFactory`. `update` reverts while a run is in flight. `MAX_STEPS` is 16. `setExecutor` is `DEFAULT_ADMIN_ROLE` only and emits `ExecutorChanged`. Vaults and modules resolve the executor through `executor()` and never store it. `setRunInFlight` is executor only and is what makes `update` revert with `RunInFlight` while a run is in flight, including against a reentrant call from inside the run itself.
 
 ## 3. IExecutor
 
@@ -183,4 +184,5 @@ error InvalidFeedAnswer(int256 answer);
 error DeadlinePassed(uint64 deadline);
 error ResidualBalance(address token, uint256 amount);
 error ZeroAddress();
+error RunInFlight();
 ```

@@ -31,3 +31,5 @@ error DeadlinePassed(uint64 deadline);
 error ResidualBalance(address token, uint256 amount);
 /// @notice A zero address was supplied where a real one is required.
 error ZeroAddress();
+/// @notice The workflow is mid run, updates are blocked.
+error RunInFlight();

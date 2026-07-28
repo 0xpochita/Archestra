@@ -33,6 +33,12 @@ interface IWorkflowRegistry {
     /// @dev DEFAULT_ADMIN_ROLE only. Emits ExecutorChanged.
     function setExecutor(address newExecutor) external;
 
+    /// @notice Marks a workflow's run as started or ended, blocking updates while in flight.
+    /// @param workflowId The workflow being run.
+    /// @param inFlight True at run start, false at run end.
+    /// @dev Executor only. Reverts with NotExecutor.
+    function setRunInFlight(uint256 workflowId, bool inFlight) external;
+
     /// @notice Reads a stored workflow.
     /// @param workflowId The workflow to read.
     /// @return workflow The stored workflow, bytes identical to what was created.
