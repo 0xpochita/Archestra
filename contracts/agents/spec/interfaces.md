@@ -1,0 +1,164 @@
+# Interfaces
+
+Every signature here is the contract between the executor, the adapters, and the backend indexer. Changing one is a breaking change and needs a version bump in `WorkflowRegistry`.
+
+## 1. Shared types
+
+```solidity
+enum StepType {
+    TRIGGER,
+    APPROVE,
+    SUPPLY,
+    SWAP,
+    STAKE,
+    CLAIM,
+    BRIDGE,
+    REDEEM,
+    GUARD,
+    NOTIFY
+}
+
+struct Step {
+    StepType stepType;
+    address adapter;
+    bytes params;
+}
+
+struct Workflow {
+    address owner;
+    address vault;
+    uint64 createdAt;
+    bool active;
+    Step[] steps;
+}
+```
+
+`params` is ABI encoded per step type. The encodings are fixed:
+
+| Step type | `abi.encode(...)` |
+| --- | --- |
+| `TRIGGER` | `(uint64 intervalSeconds, uint64 startAt)` |
+| `APPROVE` | `(address token, address spender, uint256 amount)` |
+| `SUPPLY` | `(address asset, uint256 amount)` |
+| `SWAP` | `(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, uint24 feeTier, uint64 deadline)` |
+| `STAKE` | `(address pool, address gauge, uint256 amount, uint256 minLpOut)` |
+| `CLAIM` | `(address gauge, uint256 minValueOut)` |
+| `BRIDGE` | `(uint64 destinationChainSelector, address receiver, address token, uint256 amount)` |
+| `REDEEM` | `(address asset, uint256 amount)` |
+| `GUARD` | `(address feed, int256 bound, uint8 comparator, uint64 maxStaleSeconds)` |
+| `NOTIFY` | `(bytes32 channel, bytes32 messageId)` |
+
+`comparator`: `0` means stop when the answer is below `bound`, `1` means stop when it is above.
+
+`amount = type(uint256).max` means "the vault's whole balance of that token" for `SUPPLY`, `SWAP`, `STAKE`, and `REDEEM`. The executor resolves it before the adapter call.
+
+## 2. IWorkflowRegistry
+
+```solidity
+interface IWorkflowRegistry {
+    function create(Step[] calldata steps) external returns (uint256 workflowId);
+    function update(uint256 workflowId, Step[] calldata steps) external;
+    function setActive(uint256 workflowId, bool active) external;
+    function get(uint256 workflowId) external view returns (Workflow memory);
+    function isAdapterAllowed(address adapter, StepType stepType) external view returns (bool);
+}
+```
+
+Rules: `create` deploys the caller's vault on first use. `update` reverts while a run is in flight. `MAX_STEPS` is 16.
+
+## 3. IExecutor
+
+```solidity
+interface IExecutor {
+    function run(uint256 workflowId) external returns (bytes32 runId);
+    function estimate(uint256 workflowId) external view returns (uint256 gasEstimate);
+}
+```
+
+`run` is callable by the workflow owner or by `AutomationTrigger`. It reverts when the system is paused, the workflow is inactive, or a step fails.
+
+## 4. IStepAdapter
+
+Every adapter implements one interface so the executor stays generic.
+
+```solidity
+interface IStepAdapter {
+    function supportedType() external view returns (StepType);
+
+    function execute(address vault, bytes calldata params)
+        external
+        returns (address tokenOut, uint256 amountOut);
+}
+```
+
+Rules for every adapter:
+
+- Pull funds from the vault with `safeTransferFrom` using the allowance the executor set for this step, never more.
+- Send every output token to `vault` before returning.
+- Hold no balance after the call. `assert(token.balanceOf(address(this)) == 0)` is an invariant test, not runtime code.
+- Never read `msg.sender` for authorisation. The executor is the only caller and it is checked with a modifier.
+
+## 5. IGuardModule
+
+```solidity
+interface IGuardModule {
+    function check(bytes calldata params) external view returns (bool shouldContinue, int256 answer);
+}
+```
+
+Reverts on a stale feed or a non positive answer. Returning `false` stops the run without reverting.
+
+## 6. IStrategyVault
+
+```solidity
+interface IStrategyVault {
+    function owner() external view returns (address);
+    function deposit(address token, uint256 amount) external;
+    function withdraw(address token, uint256 amount, address to) external;
+    function approveAdapter(address token, address adapter, uint256 amount) external;
+}
+```
+
+`approveAdapter` is executor only. `withdraw` is owner only and works while paused.
+
+## 7. Events
+
+The backend indexer depends on these exactly.
+
+```solidity
+event WorkflowCreated(uint256 indexed workflowId, address indexed owner, address vault, uint256 stepCount);
+event WorkflowUpdated(uint256 indexed workflowId, uint256 stepCount);
+
+event RunStarted(bytes32 indexed runId, uint256 indexed workflowId, address indexed caller);
+event StepExecuted(
+    bytes32 indexed runId,
+    uint256 indexed position,
+    StepType stepType,
+    address adapter,
+    address tokenOut,
+    uint256 amountOut
+);
+event GuardStopped(bytes32 indexed runId, uint256 indexed position, int256 answer);
+event AlertRaised(bytes32 indexed runId, bytes32 indexed channel, bytes32 messageId);
+event RunCompleted(bytes32 indexed runId, bool stopped, uint256 stepsExecuted);
+```
+
+`runId = keccak256(abi.encode(workflowId, block.number, caller, nonce))`. The backend uses `position` to line events up with `run_steps.position`.
+
+## 8. Errors
+
+```solidity
+error NotOwner();
+error NotExecutor();
+error SystemPaused();
+error WorkflowInactive();
+error EmptyWorkflow();
+error TooManySteps(uint256 given, uint256 max);
+error AdapterNotAllowed(address adapter, StepType stepType);
+error UnexpectedStepType(StepType given, StepType expected);
+error InsufficientOutput(uint256 got, uint256 min);
+error StaleFeed(uint256 updatedAt, uint256 maxStale);
+error InvalidFeedAnswer(int256 answer);
+error DeadlinePassed(uint64 deadline);
+error ResidualBalance(address token, uint256 amount);
+```
