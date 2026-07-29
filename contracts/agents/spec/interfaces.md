@@ -80,7 +80,7 @@ interface IExecutor {
 }
 ```
 
-`run` is callable by the workflow owner or by `AutomationTrigger`. It reverts when the system is paused, the workflow is inactive, or a step fails. Adapters are re-validated against the allow list at run time, not just at write time, so a delisted adapter can never execute again.
+`run` is callable by the workflow owner or by the adapter of the workflow's own `TRIGGER` step, nobody else. An allow listed trigger that is not part of the workflow cannot run it. It reverts when the system is paused, the workflow is inactive, or a step fails. Adapters are re-validated against the allow list at run time, not just at write time, so a delisted adapter can never execute again.
 
 `estimate` sums a fixed per step type gas table that mirrors the backend `MockChainAdapter`, plus a ten percent buffer.
 
@@ -195,4 +195,6 @@ error DeadlinePassed(uint64 deadline);
 error ResidualBalance(address token, uint256 amount);
 error ZeroAddress();
 error RunInFlight();
+error TriggerNotDue(uint256 nextRunAt);
+error NoTriggerStep();
 ```

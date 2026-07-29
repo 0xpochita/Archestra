@@ -42,7 +42,7 @@ contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
     /// @inheritdoc IExecutor
     function run(uint256 workflowId) external nonReentrant returns (bytes32 runId) {
         Workflow memory workflow = registry.get(workflowId);
-        if (msg.sender != workflow.owner) revert NotOwner();
+        if (msg.sender != workflow.owner && !_isWorkflowTrigger(workflow, msg.sender)) revert NotOwner();
         if (paused()) revert SystemPaused();
         if (!workflow.active) revert WorkflowInactive();
         if (workflow.steps.length == 0) revert EmptyWorkflow();
@@ -144,6 +144,15 @@ contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
         if (granted) {
             IStrategyVault(vault).approveAdapter(tokenIn, step.adapter, 0);
         }
+    }
+
+    function _isWorkflowTrigger(Workflow memory workflow, address caller) private pure returns (bool isTrigger) {
+        for (uint256 i = 0; i < workflow.steps.length; i++) {
+            if (workflow.steps[i].stepType == StepType.TRIGGER && workflow.steps[i].adapter == caller) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function _stepGas(StepType stepType) private pure returns (uint256 gasUnits) {

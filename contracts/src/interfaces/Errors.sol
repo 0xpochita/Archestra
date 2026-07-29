@@ -33,3 +33,9 @@ error ResidualBalance(address token, uint256 amount);
 error ZeroAddress();
 /// @notice The workflow is mid run, updates are blocked.
 error RunInFlight();
+
+/// @notice The trigger fired before the workflow's schedule allows.
+error TriggerNotDue(uint256 nextRunAt);
+
+/// @notice The workflow has no TRIGGER step owned by this trigger.
+error NoTriggerStep();
