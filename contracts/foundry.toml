@@ -8,6 +8,10 @@ script = "script"
 out = "out"
 libs = ["lib"]
 
+[invariant]
+runs = 32
+depth = 16
+
 [profile.ci.fuzz]
 runs = 10000
 seed = "0x1"
