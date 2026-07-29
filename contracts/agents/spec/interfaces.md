@@ -78,7 +78,9 @@ interface IExecutor {
 }
 ```
 
-`run` is callable by the workflow owner or by `AutomationTrigger`. It reverts when the system is paused, the workflow is inactive, or a step fails.
+`run` is callable by the workflow owner or by `AutomationTrigger`. It reverts when the system is paused, the workflow is inactive, or a step fails. Adapters are re-validated against the allow list at run time, not just at write time, so a delisted adapter can never execute again.
+
+`estimate` sums a fixed per step type gas table that mirrors the backend `MockChainAdapter`, plus a ten percent buffer.
 
 ## 4. IStepAdapter
 
@@ -165,7 +167,9 @@ event AlertRaised(bytes32 indexed runId, bytes32 indexed channel, bytes32 messag
 event RunCompleted(bytes32 indexed runId, bool stopped, uint256 stepsExecuted);
 ```
 
-`runId = keccak256(abi.encode(workflowId, block.number, caller, nonce))`. The backend uses `position` to line events up with `run_steps.position`.
+`runId = keccak256(abi.encode(workflowId, block.number, caller, nonce))`. `nonce` is a single counter inside the executor, incremented once per run, so two runs in one block still get distinct ids. The backend uses `position` to line events up with `run_steps.position`.
+
+Step semantics during a run: a passing `GUARD` emits `StepExecuted` like any step. A failing `GUARD` emits `GuardStopped` instead, is not counted in `stepsExecuted`, and ends the run successfully. A `NOTIFY` step emits `AlertRaised` then its `StepExecuted`. `TRIGGER` and `NOTIFY` never call an adapter.
 
 ## 8. Errors
 
