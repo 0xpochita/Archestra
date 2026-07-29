@@ -26,4 +26,8 @@ contract MockAavePool is IAavePool {
         aToken.burn(msg.sender, withdrawn);
         IERC20(asset).transfer(to, withdrawn);
     }
+
+    function getReserveData(address asset) external view returns (ReserveData memory data) {
+        data.aTokenAddress = address(aTokenOf[asset]);
+    }
 }
