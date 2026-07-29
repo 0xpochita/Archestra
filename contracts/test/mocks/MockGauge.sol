@@ -23,23 +23,17 @@ contract MockGauge is ICurveGauge {
         rewardPerSecond = rewardPerSecond_;
     }
 
-    function deposit(uint256 amount) external {
-        _update(msg.sender);
+    function deposit(uint256 amount, address account) external {
+        _update(account);
         _lpToken.transferFrom(msg.sender, address(this), amount);
-        balanceOf[msg.sender] += amount;
+        balanceOf[account] += amount;
     }
 
-    function withdraw(uint256 amount) external {
-        _update(msg.sender);
-        balanceOf[msg.sender] -= amount;
-        _lpToken.transfer(msg.sender, amount);
-    }
-
-    function claim_rewards() external {
-        _update(msg.sender);
-        uint256 amount = _accrued[msg.sender];
-        _accrued[msg.sender] = 0;
-        _rewardToken.mint(msg.sender, amount);
+    function claim_rewards(address account) external {
+        _update(account);
+        uint256 amount = _accrued[account];
+        _accrued[account] = 0;
+        _rewardToken.mint(account, amount);
     }
 
     function lp_token() external view returns (address lpToken) {

@@ -79,17 +79,15 @@ contract MockSuiteTest is Test {
         lp.mint(address(this), 10e18);
         lp.approve(address(gauge), 10e18);
 
-        gauge.deposit(10e18);
+        gauge.deposit(10e18, address(this));
         vm.warp(block.timestamp + 30);
         assertEq(gauge.claimable_reward(address(this)), 60e18);
 
-        gauge.claim_rewards();
+        gauge.claim_rewards(address(this));
         MockERC20 reward = MockERC20(gauge.reward_token());
         assertEq(reward.balanceOf(address(this)), 60e18);
         assertEq(gauge.claimable_reward(address(this)), 0);
-
-        gauge.withdraw(10e18);
-        assertEq(lp.balanceOf(address(this)), 10e18);
+        assertEq(gauge.balanceOf(address(this)), 10e18);
     }
 
     function test_AggregatorIsSettableForStaleness() public {
