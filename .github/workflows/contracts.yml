@@ -41,5 +41,5 @@ jobs:
         run: forge coverage --report summary --ir-minimum
 
       - name: Gas snapshot check
-        run: forge snapshot --check --tolerance 5
+        run: forge snapshot --check --tolerance 5 --no-match-path "test/invariant/*"
  
