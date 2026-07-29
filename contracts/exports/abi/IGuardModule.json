@@ -1,0 +1,26 @@
+[
+  {
+    "type": "function",
+    "name": "check",
+    "inputs": [
+      {
+        "name": "params",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "shouldContinue",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "answer",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

@@ -7,6 +7,11 @@ test = "test"
 script = "script"
 out = "out"
 libs = ["lib"]
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+[invariant]
+runs = 32
+depth = 16
 
 [profile.ci.fuzz]
 runs = 10000

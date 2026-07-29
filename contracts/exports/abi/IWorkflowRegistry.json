@@ -1,0 +1,291 @@
+[
+  {
+    "type": "function",
+    "name": "create",
+    "inputs": [
+      {
+        "name": "steps",
+        "type": "tuple[]",
+        "internalType": "struct Step[]",
+        "components": [
+          {
+            "name": "stepType",
+            "type": "uint8",
+            "internalType": "enum StepType"
+          },
+          {
+            "name": "adapter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "params",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "executor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "executorAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "get",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "workflow",
+        "type": "tuple",
+        "internalType": "struct Workflow",
+        "components": [
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "vault",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "active",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "steps",
+            "type": "tuple[]",
+            "internalType": "struct Step[]",
+            "components": [
+              {
+                "name": "stepType",
+                "type": "uint8",
+                "internalType": "enum StepType"
+              },
+              {
+                "name": "adapter",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "params",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAdapterAllowed",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "stepType",
+        "type": "uint8",
+        "internalType": "enum StepType"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "allowed",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setActive",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "active",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setExecutor",
+    "inputs": [
+      {
+        "name": "newExecutor",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRunInFlight",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "inFlight",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "update",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "steps",
+        "type": "tuple[]",
+        "internalType": "struct Step[]",
+        "components": [
+          {
+            "name": "stepType",
+            "type": "uint8",
+            "internalType": "enum StepType"
+          },
+          {
+            "name": "adapter",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "params",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "ExecutorChanged",
+    "inputs": [
+      {
+        "name": "previousExecutor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newExecutor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WorkflowCreated",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "vault",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "stepCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WorkflowUpdated",
+    "inputs": [
+      {
+        "name": "workflowId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "stepCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  }
+]

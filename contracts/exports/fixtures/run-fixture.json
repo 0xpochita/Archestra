@@ -1,0 +1,144 @@
+{
+  "description": "Full decoded event sequence of a real run on Arc testnet, for indexer tests without a chain connection. Every step of a run shares one transaction hash because runs are all or nothing in a single transaction.",
+  "network": {
+    "chainId": 5042002,
+    "blockNumber": 54275324,
+    "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+    "gasUsed": "685001",
+    "emitter": "0xDDD9eA8F2B1A8F5D58fdcdB6b02aB5206C211aD5"
+  },
+  "run": {
+    "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+    "workflowId": "1",
+    "caller": "0x5D3Ac56e41182844975277116733037B51a79630",
+    "vault": "0x2Dc82a18194AEEFcaB1F81F0F210985A395A8143"
+  },
+  "events": [
+    {
+      "name": "RunStarted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "workflowId": "1",
+        "caller": "0x5D3Ac56e41182844975277116733037B51a79630"
+      }
+    },
+    {
+      "name": "StepExecuted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "position": "0",
+        "stepType": 0,
+        "adapter": "0xf08d88143f362AC1f326e29Da546c2e736E19407",
+        "tokenOut": "0x0000000000000000000000000000000000000000",
+        "amountOut": "0"
+      }
+    },
+    {
+      "name": "StepExecuted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "position": "1",
+        "stepType": 2,
+        "adapter": "0x3Ea88335daA4e18501691DC95C1c60cE41Dff9a0",
+        "tokenOut": "0x105A933770Fe5cc7E2D8b5ef04fC4fd77f457CcA",
+        "amountOut": "200000000"
+      }
+    },
+    {
+      "name": "StepExecuted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "position": "2",
+        "stepType": 3,
+        "adapter": "0x7Ef9Bc195174dC9B84fa074d95525602Be181b3B",
+        "tokenOut": "0xf8428F67452dD25CC6d9362965c200a64a2ecCFf",
+        "amountOut": "50000000000000000"
+      }
+    },
+    {
+      "name": "StepExecuted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "position": "3",
+        "stepType": 4,
+        "adapter": "0x5b4338e0DF4e71bA9B9F19349AbD3E94396b59A7",
+        "tokenOut": "0x12640EBA0934D64b0B0C50Ec7BDbC86067709F5d",
+        "amountOut": "100000000000000000000"
+      }
+    },
+    {
+      "name": "AlertRaised",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "channel": "0x646566692d6f7073000000000000000000000000000000000000000000000000",
+        "messageId": "0x736d6f6b652d72756e0000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "name": "StepExecuted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "position": "4",
+        "stepType": 9,
+        "adapter": "0xDDD9eA8F2B1A8F5D58fdcdB6b02aB5206C211aD5",
+        "tokenOut": "0x0000000000000000000000000000000000000000",
+        "amountOut": "0"
+      }
+    },
+    {
+      "name": "RunCompleted",
+      "args": {
+        "runId": "0x5ad51db93f12a2fc0e21865f5f4c8923ac11c8183dabe716869d8b32f36ab11d",
+        "stopped": false,
+        "stepsExecuted": "5"
+      }
+    }
+  ],
+  "expectedRunStepsRows": [
+    {
+      "position": 0,
+      "kind": "trigger",
+      "state": "success",
+      "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+      "gasUsed": null,
+      "error": null
+    },
+    {
+      "position": 1,
+      "kind": "deposit",
+      "state": "success",
+      "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+      "gasUsed": null,
+      "error": null
+    },
+    {
+      "position": 2,
+      "kind": "swap",
+      "state": "success",
+      "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+      "gasUsed": null,
+      "error": null
+    },
+    {
+      "position": 3,
+      "kind": "yield",
+      "state": "success",
+      "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+      "gasUsed": null,
+      "error": null
+    },
+    {
+      "position": 4,
+      "kind": "alert",
+      "state": "success",
+      "txHash": "0xff3cf413debcd90f55dfdbf929a2cac63f919b8f0d27d3ae164737348d1e1d5c",
+      "gasUsed": null,
+      "error": null
+    }
+  ],
+  "notes": [
+    "run_steps.gasUsed per step is null on chain: a run is one transaction, only the total 685001 exists. The backend may keep per step gas null or attribute the total to the run.",
+    "kind is the studio block kind mapped from stepType via the table in exports/README.md.",
+    "channel and messageId are bytes32 left padded ascii: 'defi-ops' and 'smoke-run'."
+  ]
+}

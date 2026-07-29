@@ -52,6 +52,8 @@ struct Workflow {
 
 `amount = type(uint256).max` means "the vault's whole balance of that token" for `SUPPLY`, `SWAP`, `STAKE`, and `REDEEM`. The executor resolves it before the adapter call.
 
+An `APPROVE` step grants an explicit allowance that is usable during the run only: the executor resets every allowance an `APPROVE` step granted to zero at run end, including when a guard stops the run early. `INV-2` holds on every path.
+
 ## 2. IWorkflowRegistry
 
 ```solidity
@@ -78,7 +80,9 @@ interface IExecutor {
 }
 ```
 
-`run` is callable by the workflow owner or by `AutomationTrigger`. It reverts when the system is paused, the workflow is inactive, or a step fails.
+`run` is callable by the workflow owner or by the adapter of the workflow's own `TRIGGER` step, nobody else. An allow listed trigger that is not part of the workflow cannot run it. It reverts when the system is paused, the workflow is inactive, or a step fails. Adapters are re-validated against the allow list at run time, not just at write time, so a delisted adapter can never execute again.
+
+`estimate` sums a fixed per step type gas table that mirrors the backend `MockChainAdapter`, plus a ten percent buffer.
 
 ## 4. IStepAdapter
 
@@ -88,11 +92,15 @@ Every adapter implements one interface so the executor stays generic.
 interface IStepAdapter {
     function supportedType() external view returns (StepType);
 
+    function pullPlan(bytes calldata params) external view returns (address tokenIn, uint256 amountIn);
+
     function execute(address vault, bytes calldata params)
         external
         returns (address tokenOut, uint256 amountOut);
 }
 ```
+
+`pullPlan` reports the token and amount the adapter will pull for the given params, so the executor can set the exact allowance without decoding per step type. An adapter that pulls nothing returns the zero address and zero. A `type(uint256).max` amount is resolved by the executor to the vault's balance before the approval.
 
 Rules for every adapter:
 
@@ -165,7 +173,9 @@ event AlertRaised(bytes32 indexed runId, bytes32 indexed channel, bytes32 messag
 event RunCompleted(bytes32 indexed runId, bool stopped, uint256 stepsExecuted);
 ```
 
-`runId = keccak256(abi.encode(workflowId, block.number, caller, nonce))`. The backend uses `position` to line events up with `run_steps.position`.
+`runId = keccak256(abi.encode(workflowId, block.number, caller, nonce))`. `nonce` is a single counter inside the executor, incremented once per run, so two runs in one block still get distinct ids. The backend uses `position` to line events up with `run_steps.position`.
+
+Step semantics during a run: a passing `GUARD` emits `StepExecuted` like any step. A failing `GUARD` emits `GuardStopped` instead, is not counted in `stepsExecuted`, and ends the run successfully. A `NOTIFY` step emits `AlertRaised` then its `StepExecuted`. `TRIGGER` and `NOTIFY` never call an adapter.
 
 ## 8. Errors
 
@@ -185,4 +195,6 @@ error DeadlinePassed(uint64 deadline);
 error ResidualBalance(address token, uint256 amount);
 error ZeroAddress();
 error RunInFlight();
+error TriggerNotDue(uint256 nextRunAt);
+error NoTriggerStep();
 ```
