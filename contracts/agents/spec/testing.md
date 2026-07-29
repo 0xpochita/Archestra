@@ -51,7 +51,9 @@ Required cases per contract:
 | `INV-4` | A paused system executes zero steps. |
 | `INV-5` | Every `StepExecuted` position is unique inside one `runId` and strictly increasing. |
 | `INV-6` | A workflow never executes more steps than its stored step count. |
-| `INV-7` | `withdraw` by the vault owner succeeds in every reachable state, including paused and immediately after `setExecutor`. |
+| `INV-7` | `withdraw` by the vault owner succeeds in every reachable state, including paused, sessionless, and after any executor publish, retire or accept. |
+| `INV-8` | `approveAdapter` with a non zero amount never succeeds for a caller that is not both owner accepted and registry published, and never without an active session. |
+| `INV-9` | The day bucketed session accumulator never exceeds `maxPerDay`, and no single grant exceeds `maxPerRun`, with `type(uint256).max` resolved before the check. |
 
 ## 5. Security review checklist
 

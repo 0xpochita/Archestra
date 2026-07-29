@@ -103,3 +103,17 @@ Accept: the backend builds `ArcChainAdapter` without reading Solidity source.
 ### SC-22 Indexer contract test
 Scope: a fixture emitting the full event sequence for one run so the backend can test its indexer without a chain.
 Accept: the backend maps the fixture into `run_steps` rows with the correct `position`, `state`, `txHash`, and `gasUsed`.
+
+## M7 - User session layer
+
+### SC-23 Executor validity set
+Scope: registry replaces the single executor pointer with a published set: `publishExecutor`, `retireExecutor`, `isExecutor`, `executor()` kept as latest for discovery, `setRunInFlight` widened to any published executor. Events `ExecutorPublished` and `ExecutorRetired`.
+Accept: retiring an executor stops its runs but never blocks `withdraw`. A retired executor cannot call `setRunInFlight`. Publish and retire by a non admin revert.
+
+### SC-24 Vault sessions and executor acceptance
+Scope: `acceptedExecutor` bootstrapped in the initializer, owner only `acceptExecutor` requiring registry publication, per token sessions (`setSession`, `revokeSession`, day bucketed accumulator), `approveAdapter` enforcing the intersection rule and the session caps, zeroing calls always allowed.
+Accept: `INV-8` and `INV-9` pass. A published but unaccepted executor gets `ExecutorNotAccepted`. A run without a session reverts `NoActiveSession`. A run breaching a cap reverts `SessionCapExceeded` and the whole run rolls back.
+
+### SC-25 Trigger routing and redeploy
+Scope: `AutomationTrigger.performUpkeep` resolves the executor through `vault.acceptedExecutor()`, `checkUpkeep` returns false when that executor is retired or unaccepted. Full Arc testnet redeploy, exports refreshed, backend notified of the event rename.
+Accept: a scheduled run continues on the owner's accepted executor after a newer executor is published. The end to end template suite passes with sessions active.

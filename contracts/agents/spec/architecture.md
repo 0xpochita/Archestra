@@ -27,7 +27,7 @@ Target chain: **Arc testnet**, USDC native. Assets in phase 1: USDC and WETH.
    +---------+---------+---------+---------+
 ```
 
-`AutomationTrigger` sits beside the executor and is what a `trigger` block compiles to. It exposes a Chainlink Automation compatible `checkUpkeep` and `performUpkeep` pair.
+`AutomationTrigger` sits beside the executor and is what a `trigger` block compiles to. It exposes a Chainlink Automation compatible `checkUpkeep` and `performUpkeep` pair. It runs a workflow through the executor the vault's owner accepted, never through the registry's latest pointer, so scheduled runs continue on owner approved code with no fresh signature and a newly published executor gains nothing from the trigger path.
 
 `VaultFactory` is its own permanent, immutable contract, separate from the registry. The registry calls it on a user's first `create`, and vault addresses are CREATE2 derived from the owner, so they survive a registry or executor replacement. Nothing in the system is upgradeable: see `agents/rules/rules.template.md` section 8 for the decision record.
 
@@ -55,8 +55,9 @@ The ten kinds the studio renders map one to one onto step types. The mapping is 
 - A `StrategyVault` is deployed per owner through a minimal proxy factory. The owner is the only address that can withdraw.
 - The executor never holds a balance between steps. Anything it receives inside one run is forwarded to the vault before the run ends, and a non zero executor balance at run end is an invariant violation.
 - The vault approves an adapter for one step, the adapter pulls, and the executor resets the allowance to zero in the same transaction.
-- A vault never stores the executor address. It resolves `registry.executor()` at call time, so replacing the executor never touches deployed vaults.
-- Trust statement, said plainly: the admin multisig can, subject to the timelock, point vaults at new executor code, and executor code can move vault funds through `approveAdapter`. The user's protection is that `withdraw` stays open in every state, including paused: the timelock delay is the exit window.
+- A vault stores the executor its owner accepted. The registry only publishes candidate executors: a vault obeys `acceptedExecutor` and requires it to still be registry published, so neither the admin alone nor the owner alone can direct vault funds. The owner's `create` transaction is the consent for the first executor version; later versions each need the owner's `acceptExecutor` call.
+- Nothing moves without a session. The owner opens a session per token: a per run cap, a per day cap, and an expiry. `approveAdapter` clamps every grant against the active session, including BRIDGE steps, and reverts when no session is active or the caps are exceeded. Sessions are revocable in one transaction. An expired session stops runs safely, never funds.
+- Trust statement, said plainly: a registry repoint cannot touch a vault until its owner accepts the new executor, and even an accepted executor can move at most the owner's remaining session budget. `withdraw` stays open in every state, including paused and with no session: the owner's exit needs nobody's permission. Decision record and the rejected alternatives live in `agents/rules/rules.template.md` section 8; the incident history motivating per user consent (Furucombo, Socket, Li.Fi) is noted there too.
 
 ## 4. Execution model
 

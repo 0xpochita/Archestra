@@ -44,6 +44,12 @@ Publish ABIs and typed addresses, document the encoding table, help the backend 
 
 Exit: the studio's Run button produces a real transaction and the canvas lights up from indexed events.
 
+## M7 - User session layer (2 days)
+
+The registry publishes executor candidates instead of pointing at one, each vault obeys only the executor its owner accepted, and every grant is clamped by an owner set session: per run cap, per day cap, expiry, one transaction revocation. Nothing moves without an active session.
+
+Exit: a rogue executor published by a compromised admin can move nothing from any vault whose owner did not accept it, a session breach rolls the whole run back, and the eight templates plus a scheduled trigger run pass with sessions active on a fresh Arc testnet deployment.
+
 ## Out of scope for now
 
 Fee collection, multi owner vaults, partial run resumption, cross chain callbacks. Each one changes storage layout or trust assumptions, so each needs its own design PR.

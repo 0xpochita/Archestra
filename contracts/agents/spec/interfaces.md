@@ -64,12 +64,14 @@ interface IWorkflowRegistry {
     function get(uint256 workflowId) external view returns (Workflow memory);
     function isAdapterAllowed(address adapter, StepType stepType) external view returns (bool);
     function executor() external view returns (address);
-    function setExecutor(address newExecutor) external;
+    function isExecutor(address candidate) external view returns (bool);
+    function publishExecutor(address newExecutor) external;
+    function retireExecutor(address oldExecutor) external;
     function setRunInFlight(uint256 workflowId, bool inFlight) external;
 }
 ```
 
-Rules: `create` deploys the caller's vault on first use through the standalone `VaultFactory`. `update` reverts while a run is in flight. `MAX_STEPS` is 16. `setExecutor` is `DEFAULT_ADMIN_ROLE` only and emits `ExecutorChanged`. Vaults and modules resolve the executor through `executor()` and never store it. `setRunInFlight` is executor only and is what makes `update` revert with `RunInFlight` while a run is in flight, including against a reentrant call from inside the run itself.
+Rules: `create` deploys the caller's vault on first use through the standalone `VaultFactory`. `update` reverts while a run is in flight. `MAX_STEPS` is 16. The registry maintains a validity set of published executor versions, not a single obeyed pointer. `publishExecutor` and `retireExecutor` are `DEFAULT_ADMIN_ROLE` only and emit `ExecutorPublished` and `ExecutorRetired`. `executor()` returns the latest published version for discovery and backend configuration. Retiring can only stop runs, never move funds. `setRunInFlight` is callable by any published executor, so vaults still bound to an older accepted version keep running during migration windows. It is what makes `update` revert with `RunInFlight` while a run is in flight, including against a reentrant call from inside the run itself.
 
 ## 3. IExecutor
 
@@ -124,13 +126,19 @@ Reverts on a stale feed or a non positive answer. Returning `false` stops the ru
 ```solidity
 interface IStrategyVault {
     function owner() external view returns (address);
+    function acceptedExecutor() external view returns (address);
     function deposit(address token, uint256 amount) external;
     function withdraw(address token, uint256 amount, address to) external;
     function approveAdapter(address token, address adapter, uint256 amount) external;
+    function acceptExecutor(address newExecutor) external;
+    function setSession(address token, uint256 maxPerRun, uint256 maxPerDay, uint64 expiresAt) external;
+    function revokeSession(address token) external;
 }
 ```
 
-`approveAdapter` is executor only, where the executor is resolved through `registry.executor()` at call time. `withdraw` is owner only and works while paused, in every reachable state.
+`approveAdapter` requires `msg.sender == acceptedExecutor()` AND `registry.isExecutor(msg.sender)`: the admin publishes candidates, the owner ratifies for their own vault, neither alone is enough. The clone's initializer bootstraps `acceptedExecutor` to the registry's current executor, so the owner's own `create` transaction is the consent for version one. `acceptExecutor` is owner only and requires the candidate to be registry published, so a phished owner cannot ratify arbitrary attacker code.
+
+Sessions gate every non zero `approveAdapter`: per token the owner sets `maxPerRun`, `maxPerDay` (a day bucketed accumulator) and `expiresAt`. No active session or a breached cap reverts the whole run; a `type(uint256).max` step amount is resolved to the concrete vault balance before the cap check. Zeroing calls (`amount == 0`) always pass so cleanup can never be blocked. `withdraw` is owner only and works in every reachable state: paused, no session, executor retired, all of them.
 
 ## 6b. IVaultFactory
 
@@ -157,7 +165,11 @@ The backend indexer depends on these exactly.
 ```solidity
 event WorkflowCreated(uint256 indexed workflowId, address indexed owner, address vault, uint256 stepCount);
 event WorkflowUpdated(uint256 indexed workflowId, uint256 stepCount);
-event ExecutorChanged(address indexed previousExecutor, address indexed newExecutor);
+event ExecutorPublished(address indexed newExecutor);
+event ExecutorRetired(address indexed oldExecutor);
+event ExecutorAccepted(address indexed vault, address indexed executor);
+event SessionSet(address indexed vault, address indexed token, uint256 maxPerRun, uint256 maxPerDay, uint64 expiresAt);
+event SessionRevoked(address indexed vault, address indexed token);
 
 event RunStarted(bytes32 indexed runId, uint256 indexed workflowId, address indexed caller);
 event StepExecuted(
@@ -197,4 +209,7 @@ error ZeroAddress();
 error RunInFlight();
 error TriggerNotDue(uint256 nextRunAt);
 error NoTriggerStep();
+error ExecutorNotAccepted(address given, address accepted);
+error NoActiveSession(address token);
+error SessionCapExceeded(address token, uint256 requested, uint256 remaining);
 ```
