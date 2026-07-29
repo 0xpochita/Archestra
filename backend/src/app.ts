@@ -63,11 +63,10 @@ export function createApp(deps: AppDependencies) {
 
   v1.route("/", createHealthRoute());
   v1.route("/", createOpenApiRoute());
+  v1.route("/", createCatalogRoute(catalogService));
 
   v1.use("*", authMiddleware);
   v1.use("*", defaultRateLimit);
-
-  v1.route("/", createCatalogRoute(catalogService));
   v1.route("/", createWorkflowRoute(workflowService));
 
   v1.use("/workflows/:id/simulate", strictRateLimit);
