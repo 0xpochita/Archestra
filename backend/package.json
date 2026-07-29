@@ -1,0 +1,35 @@
+{
+  "name": "@archestra/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file=.env dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=.env dist/index.js",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "node --env-file=.env dist/db/migrate.js",
+    "db:seed": "node --env-file=.env dist/db/seed.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@scalar/hono-api-reference": "^0.11.11",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.7.11",
+    "pg": "^8.16.3",
+    "ulid": "^2.3.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.15.29",
+    "@types/pg": "^8.11.14",
+    "drizzle-kit": "^0.31.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

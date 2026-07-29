@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: archestra
+      POSTGRES_PASSWORD: archestra
+      POSTGRES_DB: archestra
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archestra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://archestra:archestra@postgres:5432/archestra
+      PORT: 8787
+      LOG_LEVEL: info
+      CORS_ORIGINS: http://localhost:3000
+      CHAIN_ADAPTER: mock
+      AI_PLANNER: rules
+    ports:
+      - "8787:8787"
+
+volumes:
+  postgres_data:
