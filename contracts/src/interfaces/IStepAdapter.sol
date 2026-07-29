@@ -14,6 +14,12 @@ interface IStepAdapter {
     ///      Holds no balance after returning. Never reads msg.sender for authorisation.
     function execute(address vault, bytes calldata params) external returns (address tokenOut, uint256 amountOut);
 
+    /// @notice The token and amount this adapter will pull from the vault for the given params.
+    /// @param params The step's ABI encoded parameters.
+    /// @return tokenIn The token to be pulled, the zero address when the step pulls nothing.
+    /// @return amountIn The amount to be pulled, type(uint256).max for the vault's whole balance.
+    function pullPlan(bytes calldata params) external view returns (address tokenIn, uint256 amountIn);
+
     /// @notice The single step type this adapter serves.
     /// @return stepType The supported step type.
     function supportedType() external view returns (StepType stepType);

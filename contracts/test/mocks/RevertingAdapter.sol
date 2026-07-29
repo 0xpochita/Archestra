@@ -8,13 +8,24 @@ contract RevertingAdapter is IStepAdapter {
     error AlwaysReverts();
 
     StepType private immutable _stepType;
+    address private _planToken;
+    uint256 private _planAmount;
 
     constructor(StepType stepType_) {
         _stepType = stepType_;
     }
 
+    function setPlan(address token, uint256 amount) external {
+        _planToken = token;
+        _planAmount = amount;
+    }
+
     function execute(address, bytes calldata) external pure returns (address, uint256) {
         revert AlwaysReverts();
+    }
+
+    function pullPlan(bytes calldata) external view returns (address tokenIn, uint256 amountIn) {
+        return (_planToken, _planAmount);
     }
 
     function supportedType() external view returns (StepType stepType) {

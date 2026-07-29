@@ -52,6 +52,8 @@ struct Workflow {
 
 `amount = type(uint256).max` means "the vault's whole balance of that token" for `SUPPLY`, `SWAP`, `STAKE`, and `REDEEM`. The executor resolves it before the adapter call.
 
+An `APPROVE` step grants an explicit allowance that is usable during the run only: the executor resets every allowance an `APPROVE` step granted to zero at run end, including when a guard stops the run early. `INV-2` holds on every path.
+
 ## 2. IWorkflowRegistry
 
 ```solidity
@@ -90,11 +92,15 @@ Every adapter implements one interface so the executor stays generic.
 interface IStepAdapter {
     function supportedType() external view returns (StepType);
 
+    function pullPlan(bytes calldata params) external view returns (address tokenIn, uint256 amountIn);
+
     function execute(address vault, bytes calldata params)
         external
         returns (address tokenOut, uint256 amountOut);
 }
 ```
+
+`pullPlan` reports the token and amount the adapter will pull for the given params, so the executor can set the exact allowance without decoding per step type. An adapter that pulls nothing returns the zero address and zero. A `type(uint256).max` amount is resolved by the executor to the vault's balance before the approval.
 
 Rules for every adapter:
 

@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {
@@ -23,7 +24,8 @@ import {Step, StepType, Workflow} from "../interfaces/Types.sol";
 /// @notice Walks a workflow's steps in stored order, all or nothing, emitting the event
 ///         stream the backend indexer consumes.
 /// @dev Replaceable by redeploy plus registry.setExecutor. Holds no funds between steps:
-///      a non zero balance here at run end is an invariant violation.
+///      a non zero balance here at run end is an invariant violation. Every allowance it
+///      grants, per adapter step or through an APPROVE step, is zero again by run end.
 contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
@@ -49,41 +51,7 @@ contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
         registry.setRunInFlight(workflowId, true);
         emit RunStarted(runId, workflowId, msg.sender);
 
-        bool stopped = false;
-        uint256 stepsExecuted = 0;
-        for (uint256 i = 0; i < workflow.steps.length; i++) {
-            Step memory step = workflow.steps[i];
-            if (!registry.isAdapterAllowed(step.adapter, step.stepType)) {
-                revert AdapterNotAllowed(step.adapter, step.stepType);
-            }
-
-            if (step.stepType == StepType.GUARD) {
-                (bool shouldContinue, int256 answer) = IGuardModule(step.adapter).check(step.params);
-                if (!shouldContinue) {
-                    stopped = true;
-                    emit GuardStopped(runId, i, answer);
-                    break;
-                }
-                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
-            } else if (step.stepType == StepType.TRIGGER) {
-                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
-            } else if (step.stepType == StepType.NOTIFY) {
-                (bytes32 channel, bytes32 messageId) = abi.decode(step.params, (bytes32, bytes32));
-                emit AlertRaised(runId, channel, messageId);
-                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
-            } else if (step.stepType == StepType.APPROVE) {
-                (address token, address spender, uint256 amount) = abi.decode(step.params, (address, address, uint256));
-                IStrategyVault(workflow.vault).approveAdapter(token, spender, amount);
-                emit StepExecuted(runId, i, step.stepType, step.adapter, token, amount);
-            } else {
-                IStepAdapter adapter = IStepAdapter(step.adapter);
-                StepType supported = adapter.supportedType();
-                if (supported != step.stepType) revert UnexpectedStepType(step.stepType, supported);
-                (address tokenOut, uint256 amountOut) = adapter.execute(workflow.vault, step.params);
-                emit StepExecuted(runId, i, step.stepType, step.adapter, tokenOut, amountOut);
-            }
-            stepsExecuted++;
-        }
+        (bool stopped, uint256 stepsExecuted) = _walk(runId, workflow);
 
         registry.setRunInFlight(workflowId, false);
         emit RunCompleted(runId, stopped, stepsExecuted);
@@ -110,6 +78,72 @@ contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
             gasEstimate += _stepGas(workflow.steps[i].stepType);
         }
         gasEstimate += gasEstimate / 10;
+    }
+
+    function _walk(bytes32 runId, Workflow memory workflow) private returns (bool stopped, uint256 stepsExecuted) {
+        address[] memory grantedTokens = new address[](workflow.steps.length);
+        address[] memory grantedSpenders = new address[](workflow.steps.length);
+        uint256 grantedCount = 0;
+
+        for (uint256 i = 0; i < workflow.steps.length; i++) {
+            Step memory step = workflow.steps[i];
+            if (!registry.isAdapterAllowed(step.adapter, step.stepType)) {
+                revert AdapterNotAllowed(step.adapter, step.stepType);
+            }
+
+            if (step.stepType == StepType.GUARD) {
+                (bool shouldContinue, int256 answer) = IGuardModule(step.adapter).check(step.params);
+                if (!shouldContinue) {
+                    stopped = true;
+                    emit GuardStopped(runId, i, answer);
+                    break;
+                }
+                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
+            } else if (step.stepType == StepType.TRIGGER) {
+                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
+            } else if (step.stepType == StepType.NOTIFY) {
+                (bytes32 channel, bytes32 messageId) = abi.decode(step.params, (bytes32, bytes32));
+                emit AlertRaised(runId, channel, messageId);
+                emit StepExecuted(runId, i, step.stepType, step.adapter, address(0), 0);
+            } else if (step.stepType == StepType.APPROVE) {
+                (address token, address spender, uint256 amount) = abi.decode(step.params, (address, address, uint256));
+                IStrategyVault(workflow.vault).approveAdapter(token, spender, amount);
+                if (amount > 0) {
+                    grantedTokens[grantedCount] = token;
+                    grantedSpenders[grantedCount] = spender;
+                    grantedCount++;
+                }
+                emit StepExecuted(runId, i, step.stepType, step.adapter, token, amount);
+            } else {
+                (address tokenOut, uint256 amountOut) = _executeAdapterStep(workflow.vault, step);
+                emit StepExecuted(runId, i, step.stepType, step.adapter, tokenOut, amountOut);
+            }
+            stepsExecuted++;
+        }
+
+        for (uint256 j = 0; j < grantedCount; j++) {
+            IStrategyVault(workflow.vault).approveAdapter(grantedTokens[j], grantedSpenders[j], 0);
+        }
+    }
+
+    function _executeAdapterStep(address vault, Step memory step)
+        private
+        returns (address tokenOut, uint256 amountOut)
+    {
+        IStepAdapter adapter = IStepAdapter(step.adapter);
+        StepType supported = adapter.supportedType();
+        if (supported != step.stepType) revert UnexpectedStepType(step.stepType, supported);
+
+        (address tokenIn, uint256 amountIn) = adapter.pullPlan(step.params);
+        bool granted = tokenIn != address(0) && amountIn > 0;
+        if (granted) {
+            uint256 resolved = amountIn == type(uint256).max ? IERC20(tokenIn).balanceOf(vault) : amountIn;
+            IStrategyVault(vault).approveAdapter(tokenIn, step.adapter, resolved);
+        }
+        (tokenOut, amountOut) = adapter.execute(vault, step.params);
+        if (granted) {
+            IStrategyVault(vault).approveAdapter(tokenIn, step.adapter, 0);
+        }
     }
 
     function _stepGas(StepType stepType) private pure returns (uint256 gasUnits) {

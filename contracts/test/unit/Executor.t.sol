@@ -232,15 +232,22 @@ contract ExecutorTest is Test {
         executor.run(workflowId);
     }
 
-    function test_ApproveStepSetsTheVaultAllowance() public {
-        Step[] memory steps = new Step[](1);
-        steps[0] = Step(StepType.APPROVE, address(executor), abi.encode(address(usdc), spender, uint256(500e6)));
+    function test_ApproveStepAllowanceLivesOnlyInsideTheRun() public {
+        Step[] memory steps = new Step[](2);
+        steps[0] = Step(
+            StepType.APPROVE, address(executor), abi.encode(address(usdc), address(supplyAdapter), uint256(500e6))
+        );
+        steps[1] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(500e6)));
         uint256 workflowId = _create(steps);
         address vault = registry.get(workflowId).vault;
+        usdc.mint(vault, 500e6);
+        supplyAdapter.setPull(address(usdc));
 
         vm.prank(user);
         executor.run(workflowId);
-        assertEq(usdc.allowance(vault, spender), 500e6);
+
+        assertEq(supplyAdapter.lastObservedAllowance(), 500e6);
+        assertEq(usdc.allowance(vault, address(supplyAdapter)), 0);
     }
 
     function test_EstimateSumsTheGasTable() public {
