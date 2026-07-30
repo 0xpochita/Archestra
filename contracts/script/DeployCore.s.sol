@@ -45,7 +45,7 @@ contract DeployCore is Script {
         AutomationTrigger trigger = new AutomationTrigger(address(registry));
 
         registry.grantRole(registry.CURATOR_ROLE(), deployer);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         executor.grantRole(executor.PAUSER_ROLE(), deployer);
         vm.stopBroadcast();
 

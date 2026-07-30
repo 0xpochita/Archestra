@@ -41,7 +41,7 @@ contract WorkflowRegistryTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), curator);
-        registry.setExecutor(executorAddr);
+        registry.publishExecutor(executorAddr);
         vm.stopPrank();
 
         vm.startPrank(curator);
@@ -199,27 +199,98 @@ contract WorkflowRegistryTest is Test {
         registry.setActive(workflowId, false);
     }
 
-    function test_SetExecutorEmitsPreviousAndNext() public {
+    function test_PublishExecutorAddsToTheSetAndBecomesLatest() public {
         address next = makeAddr("nextExecutor");
-        vm.expectEmit(true, true, false, true);
-        emit IWorkflowRegistry.ExecutorChanged(executorAddr, next);
+        vm.expectEmit(true, false, false, true);
+        emit IWorkflowRegistry.ExecutorPublished(next);
         vm.prank(admin);
-        registry.setExecutor(next);
+        registry.publishExecutor(next);
+
         assertEq(registry.executor(), next);
+        assertTrue(registry.isExecutor(next));
+        assertTrue(registry.isExecutor(executorAddr));
     }
 
-    function test_RevertWhen_SetExecutorByNonAdmin() public {
+    function test_RetireExecutorLeavesTheSetAndClearsTheLatestPointer() public {
+        vm.expectEmit(true, false, false, true);
+        emit IWorkflowRegistry.ExecutorRetired(executorAddr);
+        vm.prank(admin);
+        registry.retireExecutor(executorAddr);
+
+        assertFalse(registry.isExecutor(executorAddr));
+        assertEq(registry.executor(), address(0));
+    }
+
+    function test_RetireKeepsTheLatestPointerWhenAnOlderVersionGoes() public {
+        address next = makeAddr("nextExecutor");
+        vm.startPrank(admin);
+        registry.publishExecutor(next);
+        registry.retireExecutor(executorAddr);
+        vm.stopPrank();
+
+        assertEq(registry.executor(), next);
+        assertTrue(registry.isExecutor(next));
+        assertFalse(registry.isExecutor(executorAddr));
+    }
+
+    function test_AnyPublishedExecutorCanSetRunInFlight() public {
+        address next = makeAddr("nextExecutor");
+        vm.prank(admin);
+        registry.publishExecutor(next);
+
+        vm.prank(user);
+        uint256 workflowId = registry.create(_supplySteps(1));
+
+        vm.prank(executorAddr);
+        registry.setRunInFlight(workflowId, true);
+        vm.prank(user);
+        vm.expectRevert(RunInFlight.selector);
+        registry.update(workflowId, _supplySteps(2));
+
+        vm.prank(next);
+        registry.setRunInFlight(workflowId, false);
+        vm.prank(user);
+        registry.update(workflowId, _supplySteps(2));
+    }
+
+    function test_RevertWhen_RetiredExecutorSetsRunInFlight() public {
+        vm.prank(user);
+        uint256 workflowId = registry.create(_supplySteps(1));
+
+        vm.prank(admin);
+        registry.retireExecutor(executorAddr);
+
+        vm.prank(executorAddr);
+        vm.expectRevert(NotExecutor.selector);
+        registry.setRunInFlight(workflowId, true);
+    }
+
+    function test_RevertWhen_PublishExecutorByNonAdmin() public {
         vm.prank(stranger);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, bytes32(0))
         );
-        registry.setExecutor(stranger);
+        registry.publishExecutor(stranger);
     }
 
-    function test_RevertWhen_SetExecutorToZero() public {
+    function test_RevertWhen_RetireExecutorByNonAdmin() public {
+        vm.prank(stranger);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, bytes32(0))
+        );
+        registry.retireExecutor(executorAddr);
+    }
+
+    function test_RevertWhen_PublishExecutorToZero() public {
         vm.prank(admin);
         vm.expectRevert(ZeroAddress.selector);
-        registry.setExecutor(address(0));
+        registry.publishExecutor(address(0));
+    }
+
+    function test_RevertWhen_RetireExecutorToZero() public {
+        vm.prank(admin);
+        vm.expectRevert(ZeroAddress.selector);
+        registry.retireExecutor(address(0));
     }
 
     function test_SetAdapterAllowedByCuratorOnly() public {

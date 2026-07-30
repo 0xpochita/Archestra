@@ -4,7 +4,8 @@ Everything the backend needs to build `ArcChainAdapter` and the indexer, with no
 
 - ABIs: `exports/abi/*.json` (interface ABIs, stable across redeploys)
 - Addresses: `exports/addresses.arc-testnet.json` (chain id `5042002`, RPC `https://rpc.testnet.arc.io`)
-- The backend configures exactly one address: `core.registry`. Resolve the executor with the `executor()` view call at boot and treat an `ExecutorChanged` event as a config reload trigger. Key on `runId`, never on the emitting address.
+- The backend configures exactly one address: `core.registry`. Resolve the latest published executor with the `executor()` view call at boot and treat `ExecutorPublished` and `ExecutorRetired` as config reload triggers. Key on `runId`, never on the emitting address.
+- `executor()` is discovery only. The executor a given vault actually obeys is `IStrategyVault.acceptedExecutor()`, so send a run through that address, not through `executor()`. `executor()` returns the zero address when the latest published version has been retired and no replacement is published yet.
 
 ## StepType enum
 
@@ -62,13 +63,24 @@ Sequence per run, from the executor address:
 
 A reverted run emits nothing at all: the transaction rolls back, so only successful transactions reach the indexer.
 
-Workflow lifecycle events from the registry: `WorkflowCreated(uint256 indexed workflowId, address indexed owner, address vault, uint256 stepCount)`, `WorkflowUpdated(uint256 indexed workflowId, uint256 stepCount)`, `ExecutorChanged(address indexed previousExecutor, address indexed newExecutor)`.
+Workflow lifecycle events from the registry: `WorkflowCreated(uint256 indexed workflowId, address indexed owner, address vault, uint256 stepCount)`, `WorkflowUpdated(uint256 indexed workflowId, uint256 stepCount)`, `ExecutorPublished(address indexed newExecutor)`, `ExecutorRetired(address indexed oldExecutor)`.
+
+`ExecutorChanged(address,address)` is gone. It is replaced by the `ExecutorPublished` and `ExecutorRetired` pair, because the registry now holds a set of valid executor versions rather than one pointer every vault obeys.
+
+## Executor acceptance and spending sessions
+
+Two owner facing states gate every run, both emitted from the vault address:
+
+- `ExecutorAccepted(address indexed vault, address indexed executor)`: the vault now obeys this executor version. It fires once at vault creation, bootstrapped to the registry's latest published executor, and again on every `acceptExecutor` call. Publishing a newer executor never moves a vault by itself, so a UI must prompt the owner to accept before runs continue on the new version.
+- `SessionSet(address indexed vault, address indexed token, uint256 maxPerRun, uint256 maxPerDay, uint64 expiresAt)` and `SessionRevoked(address indexed vault, address indexed token)`: the per token spending budget. Every non zero allowance a run grants is metered against it, `BRIDGE` steps included, with `2^256 - 1` resolved to the concrete vault balance before the check. `maxPerDay` accumulates inside `block.timestamp / 86400` buckets and resets on the next bucket.
+
+A run reverts before touching funds when the vault has no session for a token the run spends, when the session expired, or when a grant breaches either cap. `withdraw` is unaffected by all of it: it works while paused, with no session, and after any publish, retire or accept.
 
 ## Errors
 
 Custom errors the frontend or backend may surface, by signature:
 
-`NotOwner()`, `NotExecutor()`, `SystemPaused()`, `WorkflowInactive()`, `EmptyWorkflow()`, `TooManySteps(uint256,uint256)`, `AdapterNotAllowed(address,uint8)`, `UnexpectedStepType(uint8,uint8)`, `InsufficientOutput(uint256,uint256)`, `StaleFeed(uint256,uint256)`, `InvalidFeedAnswer(int256)`, `DeadlinePassed(uint64)`, `ResidualBalance(address,uint256)`, `ZeroAddress()`, `RunInFlight()`, `TriggerNotDue(uint256)`, `NoTriggerStep()`
+`NotOwner()`, `NotExecutor()`, `SystemPaused()`, `WorkflowInactive()`, `EmptyWorkflow()`, `TooManySteps(uint256,uint256)`, `AdapterNotAllowed(address,uint8)`, `UnexpectedStepType(uint8,uint8)`, `InsufficientOutput(uint256,uint256)`, `StaleFeed(uint256,uint256)`, `InvalidFeedAnswer(int256)`, `DeadlinePassed(uint64)`, `ResidualBalance(address,uint256)`, `ZeroAddress()`, `RunInFlight()`, `TriggerNotDue(uint256)`, `NoTriggerStep()`, `ExecutorNotAccepted(address,address)`, `NoActiveSession(address)`, `SessionCapExceeded(address,uint256,uint256)`
 
 ## Indexer test fixture
 

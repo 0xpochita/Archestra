@@ -7,4 +7,8 @@ contract MockRegistry {
     function setExecutor(address newExecutor) external {
         executor = newExecutor;
     }
+
+    function isExecutor(address candidate) external view returns (bool published) {
+        return candidate != address(0) && candidate == executor;
+    }
 }

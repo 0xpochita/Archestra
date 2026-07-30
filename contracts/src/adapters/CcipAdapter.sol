@@ -20,7 +20,7 @@ contract CcipAdapter is IStepAdapter {
     ICcipRouter public immutable router;
 
     modifier onlyExecutor() {
-        if (msg.sender != registry.executor()) revert NotExecutor();
+        if (!registry.isExecutor(msg.sender)) revert NotExecutor();
         _;
     }
 

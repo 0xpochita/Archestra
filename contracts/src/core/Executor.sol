@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {
     AdapterNotAllowed,
     EmptyWorkflow,
+    ExecutorNotAccepted,
     NotOwner,
     SystemPaused,
     UnexpectedStepType,
@@ -23,9 +24,10 @@ import {Step, StepType, Workflow} from "../interfaces/Types.sol";
 
 /// @notice Walks a workflow's steps in stored order, all or nothing, emitting the event
 ///         stream the backend indexer consumes.
-/// @dev Replaceable by redeploy plus registry.setExecutor. Holds no funds between steps:
-///      a non zero balance here at run end is an invariant violation. Every allowance it
-///      grants, per adapter step or through an APPROVE step, is zero again by run end.
+/// @dev Replaceable by redeploy plus registry.publishExecutor, and every vault owner accepts
+///      the new version for themselves. Holds no funds between steps: a non zero balance here
+///      at run end is an invariant violation. Every allowance it grants, per adapter step or
+///      through an APPROVE step, is zero again by run end.
 contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
@@ -46,6 +48,9 @@ contract Executor is IExecutor, AccessControl, Pausable, ReentrancyGuard {
         if (paused()) revert SystemPaused();
         if (!workflow.active) revert WorkflowInactive();
         if (workflow.steps.length == 0) revert EmptyWorkflow();
+
+        address accepted = IStrategyVault(workflow.vault).acceptedExecutor();
+        if (accepted != address(this)) revert ExecutorNotAccepted(address(this), accepted);
 
         runId = keccak256(abi.encode(workflowId, block.number, msg.sender, _runNonce++));
         registry.setRunInFlight(workflowId, true);

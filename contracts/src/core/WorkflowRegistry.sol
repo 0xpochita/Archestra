@@ -15,9 +15,11 @@ import {IVaultFactory} from "../interfaces/IVaultFactory.sol";
 import {IWorkflowRegistry} from "../interfaces/IWorkflowRegistry.sol";
 import {Step, StepType, Workflow} from "../interfaces/Types.sol";
 
-/// @notice Stores workflow definitions, the adapter allow list and the executor pointer.
+/// @notice Stores workflow definitions, the adapter allow list and the published executor set.
 /// @dev Replaceable by redeploy and reseed: graphs are backend owned, vault addresses
-///      live in the immutable VaultFactory, so no state here is precious.
+///      live in the immutable VaultFactory, so no state here is precious. The executor set
+///      is a validity list of candidates, not a pointer vaults obey: publishing moves no funds
+///      until a vault owner accepts the version for their own vault.
 contract WorkflowRegistry is IWorkflowRegistry, AccessControl {
     bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
     uint256 public constant MAX_STEPS = 16;
@@ -25,7 +27,8 @@ contract WorkflowRegistry is IWorkflowRegistry, AccessControl {
     IVaultFactory public immutable vaultFactory;
 
     uint256 private _nextWorkflowId = 1;
-    address private _executor;
+    address private _latestExecutor;
+    mapping(address executorAddress => bool published) private _publishedExecutors;
     mapping(uint256 workflowId => Workflow workflow) private _workflows;
     mapping(address adapter => mapping(StepType stepType => bool allowed)) private _adapterAllowed;
     mapping(uint256 workflowId => bool inFlight) private _runInFlight;
@@ -78,11 +81,19 @@ contract WorkflowRegistry is IWorkflowRegistry, AccessControl {
     }
 
     /// @inheritdoc IWorkflowRegistry
-    function setExecutor(address newExecutor) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function publishExecutor(address newExecutor) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (newExecutor == address(0)) revert ZeroAddress();
-        address previous = _executor;
-        _executor = newExecutor;
-        emit ExecutorChanged(previous, newExecutor);
+        _publishedExecutors[newExecutor] = true;
+        _latestExecutor = newExecutor;
+        emit ExecutorPublished(newExecutor);
+    }
+
+    /// @inheritdoc IWorkflowRegistry
+    function retireExecutor(address oldExecutor) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (oldExecutor == address(0)) revert ZeroAddress();
+        _publishedExecutors[oldExecutor] = false;
+        if (_latestExecutor == oldExecutor) _latestExecutor = address(0);
+        emit ExecutorRetired(oldExecutor);
     }
 
     /// @notice Adds or removes an adapter for one step type.
@@ -98,7 +109,7 @@ contract WorkflowRegistry is IWorkflowRegistry, AccessControl {
 
     /// @inheritdoc IWorkflowRegistry
     function setRunInFlight(uint256 workflowId, bool inFlight) external {
-        if (msg.sender != _executor) revert NotExecutor();
+        if (!_publishedExecutors[msg.sender]) revert NotExecutor();
         _runInFlight[workflowId] = inFlight;
     }
 
@@ -114,7 +125,12 @@ contract WorkflowRegistry is IWorkflowRegistry, AccessControl {
 
     /// @inheritdoc IWorkflowRegistry
     function executor() external view returns (address executorAddress) {
-        return _executor;
+        return _latestExecutor;
+    }
+
+    /// @inheritdoc IWorkflowRegistry
+    function isExecutor(address candidate) external view returns (bool published) {
+        return _publishedExecutors[candidate];
     }
 
     function _validateSteps(Step[] calldata steps) private view {

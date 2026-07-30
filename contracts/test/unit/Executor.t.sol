@@ -4,11 +4,16 @@ pragma solidity 0.8.26;
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {
     AdapterNotAllowed,
+    ExecutorNotAccepted,
+    NoActiveSession,
+    NotExecutor,
     NotOwner,
+    SessionCapExceeded,
     SystemPaused,
     UnexpectedStepType,
     WorkflowInactive
@@ -21,12 +26,17 @@ import {MockStepAdapter} from "../mocks/MockStepAdapter.sol";
 import {RevertingAdapter} from "../mocks/RevertingAdapter.sol";
 
 contract ExecutorTest is Test {
+    uint256 internal constant CAP = type(uint128).max;
+
     VaultFactory internal factory;
     WorkflowRegistry internal registry;
     Executor internal executor;
     MockERC20 internal usdc;
     MockStepAdapter internal supplyAdapter;
     MockGuardModule internal guard;
+
+    address internal userVault;
+    uint64 internal expiry;
 
     address internal admin = makeAddr("admin");
     address internal pauser = makeAddr("pauser");
@@ -36,6 +46,8 @@ contract ExecutorTest is Test {
     address internal spender = makeAddr("spender");
 
     function setUp() public {
+        vm.warp(100_000);
+        expiry = uint64(block.timestamp + 365 days);
         address predictedRegistry = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         factory = new VaultFactory(predictedRegistry);
         registry = new WorkflowRegistry(address(factory), admin);
@@ -46,7 +58,7 @@ contract ExecutorTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         executor.grantRole(executor.PAUSER_ROLE(), pauser);
         registry.setAdapterAllowed(triggerModule, StepType.TRIGGER, true);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
@@ -54,6 +66,10 @@ contract ExecutorTest is Test {
         registry.setAdapterAllowed(address(executor), StepType.NOTIFY, true);
         registry.setAdapterAllowed(address(executor), StepType.APPROVE, true);
         vm.stopPrank();
+
+        userVault = factory.createVault(user);
+        vm.prank(user);
+        StrategyVault(userVault).setSession(address(usdc), CAP, CAP, expiry);
     }
 
     function _create(Step[] memory steps) internal returns (uint256 workflowId) {
@@ -239,15 +255,138 @@ contract ExecutorTest is Test {
         );
         steps[1] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(500e6)));
         uint256 workflowId = _create(steps);
-        address vault = registry.get(workflowId).vault;
-        usdc.mint(vault, 500e6);
+        usdc.mint(userVault, 500e6);
         supplyAdapter.setPull(address(usdc));
 
         vm.prank(user);
         executor.run(workflowId);
 
         assertEq(supplyAdapter.lastObservedAllowance(), 500e6);
-        assertEq(usdc.allowance(vault, address(supplyAdapter)), 0);
+        assertEq(usdc.allowance(userVault, address(supplyAdapter)), 0);
+    }
+
+    function test_RevertWhen_TheVaultNeverAcceptedThisExecutor() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
+        uint256 workflowId = _create(steps);
+
+        Executor newExecutor = new Executor(address(registry), admin);
+        vm.prank(admin);
+        registry.publishExecutor(address(newExecutor));
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(ExecutorNotAccepted.selector, address(newExecutor), address(executor)));
+        newExecutor.run(workflowId);
+    }
+
+    function test_AcceptedExecutorKeepsRunningAfterANewerPublish() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
+        uint256 workflowId = _create(steps);
+
+        Executor newExecutor = new Executor(address(registry), admin);
+        vm.prank(admin);
+        registry.publishExecutor(address(newExecutor));
+
+        vm.prank(user);
+        executor.run(workflowId);
+        assertEq(supplyAdapter.executeCount(), 1);
+    }
+
+    function test_AcceptingANewerExecutorRetiresTheOldOneForThisVault() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
+        uint256 workflowId = _create(steps);
+
+        Executor newExecutor = new Executor(address(registry), admin);
+        vm.prank(admin);
+        registry.publishExecutor(address(newExecutor));
+        vm.prank(user);
+        StrategyVault(userVault).acceptExecutor(address(newExecutor));
+
+        vm.prank(user);
+        newExecutor.run(workflowId);
+        assertEq(supplyAdapter.executeCount(), 1);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(ExecutorNotAccepted.selector, address(executor), address(newExecutor)));
+        executor.run(workflowId);
+    }
+
+    function test_RetiredExecutorStopsRunsButNeverTheWithdrawal() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
+        uint256 workflowId = _create(steps);
+        usdc.mint(userVault, 100e6);
+
+        vm.prank(admin);
+        registry.retireExecutor(address(executor));
+
+        vm.prank(user);
+        vm.expectRevert(NotExecutor.selector);
+        executor.run(workflowId);
+
+        vm.prank(user);
+        StrategyVault(userVault).withdraw(address(usdc), 100e6, user);
+        assertEq(usdc.balanceOf(user), 100e6);
+    }
+
+    function test_RevertWhen_RunWithoutAnActiveSession() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(500e6)));
+        uint256 workflowId = _create(steps);
+        usdc.mint(userVault, 500e6);
+        supplyAdapter.setPlan(address(usdc), 500e6);
+        supplyAdapter.setPull(address(usdc));
+
+        vm.prank(user);
+        StrategyVault(userVault).revokeSession(address(usdc));
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(NoActiveSession.selector, address(usdc)));
+        executor.run(workflowId);
+    }
+
+    function test_RevertWhen_RunBreachesThePerRunCapAndTheWholeRunRollsBack() public {
+        Step[] memory steps = new Step[](2);
+        steps[0] = Step(StepType.APPROVE, address(executor), abi.encode(address(usdc), spender, uint256(50e6)));
+        steps[1] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(400e6)));
+        uint256 workflowId = _create(steps);
+        usdc.mint(userVault, 400e6);
+        supplyAdapter.setPlan(address(usdc), 400e6);
+        supplyAdapter.setPull(address(usdc));
+
+        vm.prank(user);
+        StrategyVault(userVault).setSession(address(usdc), 200e6, CAP, expiry);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SessionCapExceeded.selector, address(usdc), 400e6, 200e6));
+        executor.run(workflowId);
+
+        assertEq(usdc.allowance(userVault, spender), 0);
+        assertEq(usdc.balanceOf(userVault), 400e6);
+        assertEq(supplyAdapter.executeCount(), 0);
+        assertEq(StrategyVault(userVault).sessionSpentToday(address(usdc)), 0);
+    }
+
+    function test_RevertWhen_RunBreachesThePerDayCap() public {
+        Step[] memory steps = new Step[](1);
+        steps[0] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(200e6)));
+        uint256 workflowId = _create(steps);
+        usdc.mint(userVault, 200e6);
+        supplyAdapter.setPlan(address(usdc), 200e6);
+        supplyAdapter.setPull(address(usdc));
+
+        vm.prank(user);
+        StrategyVault(userVault).setSession(address(usdc), CAP, 300e6, expiry);
+
+        vm.prank(user);
+        executor.run(workflowId);
+        assertEq(StrategyVault(userVault).sessionSpentToday(address(usdc)), 200e6);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(SessionCapExceeded.selector, address(usdc), 200e6, 100e6));
+        executor.run(workflowId);
     }
 
     function test_EstimateSumsTheGasTable() public {

@@ -7,6 +7,7 @@ import {CcipAdapter} from "../../src/adapters/CcipAdapter.sol";
 import {CurveAdapter} from "../../src/adapters/CurveAdapter.sol";
 import {UniswapAdapter} from "../../src/adapters/UniswapAdapter.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
@@ -22,6 +23,8 @@ import {MockSwapRouter} from "../mocks/MockSwapRouter.sol";
 
 /// One end to end test per seeded strategy template from the backend spec.
 contract TemplatesTest is Test {
+    uint256 internal constant SESSION_CAP = type(uint128).max;
+
     VaultFactory internal factory;
     WorkflowRegistry internal registry;
     Executor internal executor;
@@ -83,7 +86,7 @@ contract TemplatesTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(trigger), StepType.TRIGGER, true);
         registry.setAdapterAllowed(address(executor), StepType.APPROVE, true);
         registry.setAdapterAllowed(address(executor), StepType.NOTIFY, true);
@@ -94,6 +97,16 @@ contract TemplatesTest is Test {
         registry.setAdapterAllowed(address(stakeAdapter), StepType.STAKE, true);
         registry.setAdapterAllowed(address(claimAdapter), StepType.CLAIM, true);
         registry.setAdapterAllowed(address(bridgeAdapter), StepType.BRIDGE, true);
+        vm.stopPrank();
+
+        address userVault = factory.createVault(user);
+        uint64 expiry = uint64(block.timestamp + 365 days);
+        vm.startPrank(user);
+        StrategyVault(userVault).setSession(address(usdc), SESSION_CAP, SESSION_CAP, expiry);
+        StrategyVault(userVault).setSession(address(weth), SESSION_CAP, SESSION_CAP, expiry);
+        StrategyVault(userVault).setSession(address(aUsdc), SESSION_CAP, SESSION_CAP, expiry);
+        StrategyVault(userVault).setSession(address(lpToken), SESSION_CAP, SESSION_CAP, expiry);
+        StrategyVault(userVault).setSession(address(rewardToken), SESSION_CAP, SESSION_CAP, expiry);
         vm.stopPrank();
     }
 

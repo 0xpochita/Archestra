@@ -39,3 +39,10 @@ error TriggerNotDue(uint256 nextRunAt);
 
 /// @notice The workflow has no TRIGGER step owned by this trigger.
 error NoTriggerStep();
+
+/// @notice The caller is a published executor the vault owner has not accepted.
+error ExecutorNotAccepted(address given, address accepted);
+/// @notice The vault owner has opened no session for this token, or it has expired.
+error NoActiveSession(address token);
+/// @notice The requested grant is larger than the session still allows.
+error SessionCapExceeded(address token, uint256 requested, uint256 remaining);

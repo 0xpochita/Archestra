@@ -28,6 +28,7 @@ contract PauseAndRolesTest is Test {
     address internal vault;
 
     function setUp() public {
+        vm.warp(100_000);
         address predictedRegistry = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         factory = new VaultFactory(predictedRegistry);
         registry = new WorkflowRegistry(address(factory), admin);
@@ -37,7 +38,7 @@ contract PauseAndRolesTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         executor.grantRole(executor.PAUSER_ROLE(), pauser);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         vm.stopPrank();
@@ -48,6 +49,10 @@ contract PauseAndRolesTest is Test {
         workflowId = registry.create(steps);
         vault = registry.get(workflowId).vault;
         usdc.mint(vault, 100e6);
+
+        vm.prank(user);
+        StrategyVault(vault)
+            .setSession(address(usdc), type(uint128).max, type(uint128).max, uint64(block.timestamp + 365 days));
     }
 
     function test_PausedRunRevertsSystemPaused() public {

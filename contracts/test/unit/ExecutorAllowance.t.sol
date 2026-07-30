@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {IExecutor} from "../../src/interfaces/IExecutor.sol";
@@ -13,6 +14,8 @@ import {MockStepAdapter} from "../mocks/MockStepAdapter.sol";
 import {RevertingAdapter} from "../mocks/RevertingAdapter.sol";
 
 contract ExecutorAllowanceTest is Test {
+    uint256 internal constant CAP = type(uint128).max;
+
     VaultFactory internal factory;
     WorkflowRegistry internal registry;
     Executor internal executor;
@@ -20,11 +23,14 @@ contract ExecutorAllowanceTest is Test {
     MockStepAdapter internal supplyAdapter;
     MockGuardModule internal guard;
 
+    address internal userVault;
+
     address internal admin = makeAddr("admin");
     address internal user = makeAddr("user");
     address internal spender = makeAddr("spender");
 
     function setUp() public {
+        vm.warp(100_000);
         address predictedRegistry = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         factory = new VaultFactory(predictedRegistry);
         registry = new WorkflowRegistry(address(factory), admin);
@@ -35,11 +41,15 @@ contract ExecutorAllowanceTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         registry.setAdapterAllowed(address(guard), StepType.GUARD, true);
         registry.setAdapterAllowed(address(executor), StepType.APPROVE, true);
         vm.stopPrank();
+
+        userVault = factory.createVault(user);
+        vm.prank(user);
+        StrategyVault(userVault).setSession(address(usdc), CAP, CAP, uint64(block.timestamp + 365 days));
     }
 
     function _createAndFund(Step[] memory steps, uint256 balance) internal returns (uint256 workflowId, address vault) {

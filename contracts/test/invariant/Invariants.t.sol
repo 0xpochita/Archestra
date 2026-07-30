@@ -15,8 +15,9 @@ import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockGauge} from "../mocks/MockGauge.sol";
 import {Handler} from "./Handler.sol";
 
-/// The seven system invariants from agents/spec/testing.md section 4, driven by a
-/// handler that deposits, withdraws, runs, pauses, warps and swaps the executor.
+/// The nine system invariants from agents/spec/testing.md section 4, driven by a handler
+/// that deposits, withdraws, runs, pauses, warps, publishes and retires executors, accepts
+/// them per vault, and opens, revokes and reopens sessions.
 contract InvariantsTest is Test {
     VaultFactory internal factory;
     WorkflowRegistry internal registry;
@@ -59,7 +60,7 @@ contract InvariantsTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         executor.grantRole(executor.PAUSER_ROLE(), pauser);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         registry.setAdapterAllowed(address(redeemAdapter), StepType.REDEEM, true);
@@ -82,10 +83,6 @@ contract InvariantsTest is Test {
             pauser
         );
         targetContract(address(handler));
-    }
-
-    function _tokens() private view returns (address[5] memory tokens) {
-        return [address(usdc), address(aUsdc), address(lpToken), address(rewardToken), address(0)];
     }
 
     /// INV-1: the executor, past or present, holds zero balance of every tracked token.
@@ -143,7 +140,8 @@ contract InvariantsTest is Test {
         assertFalse(handler.stepCountExceeded());
     }
 
-    /// INV-7: the owner can always withdraw the whole usdc balance, in every state.
+    /// INV-7: the owner can always withdraw the whole usdc balance, in every reachable state,
+    /// including paused, sessionless, and after any executor publish, retire or accept.
     function invariant_OwnerCanAlwaysWithdraw() public {
         for (uint256 i = 0; i < 3; i++) {
             address actor = handler.actors(i);
@@ -155,5 +153,32 @@ contract InvariantsTest is Test {
             StrategyVault(vault).withdraw(address(usdc), balance, actor);
             vm.revertToState(snapshot);
         }
+    }
+
+    /// INV-8: a non zero grant never succeeds for a caller that is not both owner accepted and
+    /// registry published, and never without an active session.
+    function invariant_GrantsNeedAcceptanceAndASession() public view {
+        assertFalse(handler.unauthorisedGrantSucceeded());
+    }
+
+    /// INV-9: the day bucketed accumulator never exceeds maxPerDay and no single grant
+    /// exceeds maxPerRun, with type(uint256).max resolved before the check.
+    function invariant_SessionAccumulatorStaysUnderTheCaps() public view {
+        assertFalse(handler.perRunCapExceeded());
+        address[5] memory tokens = _tokens();
+        for (uint256 i = 0; i < 3; i++) {
+            address vault = factory.vaultOf(handler.actors(i));
+            if (vault == address(0)) continue;
+            for (uint256 t = 0; t < tokens.length; t++) {
+                if (tokens[t] == address(0)) continue;
+                (, uint256 maxPerDay, uint64 expiresAt) = StrategyVault(vault).sessionOf(tokens[t]);
+                if (expiresAt == 0) continue;
+                assertLe(StrategyVault(vault).sessionSpentToday(tokens[t]), maxPerDay);
+            }
+        }
+    }
+
+    function _tokens() private view returns (address[5] memory tokens) {
+        return [address(usdc), address(aUsdc), address(lpToken), address(rewardToken), address(0)];
     }
 }

@@ -85,7 +85,7 @@ Gas ceiling: a workflow is capped at `MAX_STEPS = 16`. The registry rejects long
 
 Pausing stops execution and new runs. Withdrawal from a vault stays open while paused, always.
 
-`DEFAULT_ADMIN_ROLE` and `CURATOR_ROLE` sit behind the multisig plus an OpenZeppelin `TimelockController`. The delay is zero on Arc testnet and is raised to 48 hours as a hard gate before any deployment that holds real value. `setExecutor` and allow list changes go through this path. `PAUSER_ROLE` stays hot on the team key and the monitor bot so pausing is never delayed.
+`DEFAULT_ADMIN_ROLE` and `CURATOR_ROLE` sit behind the multisig plus an OpenZeppelin `TimelockController`. The delay is zero on Arc testnet and is raised to 48 hours as a hard gate before any deployment that holds real value. `publishExecutor`, `retireExecutor` and allow list changes go through this path. `PAUSER_ROLE` stays hot on the team key and the monitor bot so pausing is never delayed.
 
 ## 6. Backend interaction
 
@@ -97,4 +97,4 @@ The backend does not sign transactions in phase 1. The flow is:
 
 `ChainAdapter` in the backend is the seam. `MockChainAdapter` fakes hashes now, `ArcChainAdapter` reads these events later.
 
-The backend configures exactly one address: the registry. It resolves `executor()` with a view call at boot and treats an `ExecutorChanged` event as a config reload trigger. `deployments/arc-testnet.json` stays flat, with no proxy or implementation distinction. Historical run events remain valid at a replaced executor's address, so the indexer keys on `runId`, never on the emitting address.
+The backend configures exactly one address: the registry. It resolves `executor()` with a view call at boot and treats `ExecutorPublished` and `ExecutorRetired` as config reload triggers. A run goes to the vault's `acceptedExecutor()`, not to the registry's latest pointer, so the backend reads that per vault before it builds a transaction. `deployments/arc-testnet.json` stays flat, with no proxy or implementation distinction. Historical run events remain valid at a replaced executor's address, so the indexer keys on `runId`, never on the emitting address.

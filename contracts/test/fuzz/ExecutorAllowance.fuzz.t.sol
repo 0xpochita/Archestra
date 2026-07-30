@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
@@ -20,6 +21,7 @@ contract ExecutorAllowanceFuzzTest is Test {
     address internal user = makeAddr("user");
 
     function setUp() public {
+        vm.warp(100_000);
         address predictedRegistry = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         factory = new VaultFactory(predictedRegistry);
         registry = new WorkflowRegistry(address(factory), admin);
@@ -29,9 +31,14 @@ contract ExecutorAllowanceFuzzTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         vm.stopPrank();
+
+        address userVault = factory.createVault(user);
+        vm.prank(user);
+        StrategyVault(userVault)
+            .setSession(address(usdc), type(uint256).max, type(uint256).max, uint64(block.timestamp + 365 days));
     }
 
     function testFuzz_ExactPullIsBracketedAndReset(uint256 balance, uint256 pull) public {

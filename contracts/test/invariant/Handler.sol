@@ -21,10 +21,13 @@ contract Handler is CommonBase, StdCheats, StdUtils {
     bytes32 private constant STEP_EXECUTED_SIG =
         keccak256("StepExecuted(bytes32,uint256,uint8,address,address,uint256)");
     bytes32 private constant RUN_COMPLETED_SIG = keccak256("RunCompleted(bytes32,bool,uint256)");
+    uint256 private constant SESSION_CAP = type(uint128).max;
 
     WorkflowRegistry public immutable registry;
     VaultFactory public immutable factory;
     MockERC20 public immutable usdc;
+    MockERC20 public immutable aUsdc;
+    MockERC20 public immutable lpToken;
     MockCurvePool public immutable curvePool;
     MockGauge public immutable gauge;
     AaveAdapter public immutable supplyAdapter;
@@ -44,6 +47,8 @@ contract Handler is CommonBase, StdCheats, StdUtils {
     bool public pausedRunSucceeded;
     bool public positionOrderBroken;
     bool public stepCountExceeded;
+    bool public unauthorisedGrantSucceeded;
+    bool public perRunCapExceeded;
 
     constructor(
         WorkflowRegistry registry_,
@@ -62,7 +67,9 @@ contract Handler is CommonBase, StdCheats, StdUtils {
         registry = registry_;
         factory = factory_;
         usdc = usdc_;
+        aUsdc = MockERC20(supplyAdapter_.pool().getReserveData(address(usdc_)).aTokenAddress);
         curvePool = curvePool_;
+        lpToken = curvePool_.lpToken();
         gauge = gauge_;
         supplyAdapter = supplyAdapter_;
         redeemAdapter = redeemAdapter_;
@@ -76,18 +83,10 @@ contract Handler is CommonBase, StdCheats, StdUtils {
         actors[2] = makeAddr("actor2");
     }
 
-    function executorCount() external view returns (uint256 count) {
-        return executors.length;
-    }
-
-    function currentExecutor() public view returns (address executorAddress) {
-        return registry.executor();
-    }
-
     function deposit(uint256 actorSeed, uint256 amount) external {
         address actor = actors[bound(actorSeed, 0, 2)];
         amount = bound(amount, 1, 1_000_000e6);
-        address vault = factory.createVault(actor);
+        address vault = _vaultWithSessions(actor);
         usdc.mint(actor, amount);
         vm.startPrank(actor);
         usdc.approve(vault, amount);
@@ -113,13 +112,15 @@ contract Handler is CommonBase, StdCheats, StdUtils {
     }
 
     function pause() external {
+        address target = executors[executors.length - 1];
         vm.prank(pauser);
-        Executor(currentExecutor()).pause();
+        Executor(target).pause();
     }
 
     function unpause() external {
+        address target = executors[executors.length - 1];
         vm.prank(pauser);
-        Executor(currentExecutor()).unpause();
+        Executor(target).unpause();
     }
 
     function runSupplyMax(uint256 actorSeed) external {
@@ -138,24 +139,91 @@ contract Handler is CommonBase, StdCheats, StdUtils {
         _runSingleStep(actorSeed, StepType.CLAIM);
     }
 
-    function swapExecutor() external {
+    function publishExecutor() external {
         Executor next = new Executor(address(registry), admin);
+        bytes32 pauserRole = next.PAUSER_ROLE();
         vm.startPrank(admin);
-        next.grantRole(next.PAUSER_ROLE(), pauser);
-        registry.setExecutor(address(next));
+        next.grantRole(pauserRole, pauser);
+        registry.publishExecutor(address(next));
         vm.stopPrank();
         executors.push(address(next));
     }
 
+    function retireNewestExecutor() external {
+        if (executors.length < 2) return;
+        address target = executors[executors.length - 1];
+        vm.prank(admin);
+        registry.retireExecutor(target);
+    }
+
+    function acceptLatestExecutor(uint256 actorSeed) external {
+        address actor = actors[bound(actorSeed, 0, 2)];
+        address vault = factory.vaultOf(actor);
+        if (vault == address(0)) return;
+        address candidate = registry.executor();
+        if (candidate == address(0)) return;
+        vm.prank(actor);
+        StrategyVault(vault).acceptExecutor(candidate);
+    }
+
+    function revokeSession(uint256 actorSeed, uint256 tokenSeed) external {
+        address actor = actors[bound(actorSeed, 0, 2)];
+        address vault = factory.vaultOf(actor);
+        if (vault == address(0)) return;
+        address token = _token(tokenSeed);
+        vm.prank(actor);
+        StrategyVault(vault).revokeSession(token);
+    }
+
+    function reopenSession(uint256 actorSeed, uint256 tokenSeed, uint256 cap) external {
+        address actor = actors[bound(actorSeed, 0, 2)];
+        address vault = factory.vaultOf(actor);
+        if (vault == address(0)) return;
+        address token = _token(tokenSeed);
+        uint256 alreadySpent = StrategyVault(vault).sessionSpentToday(token);
+        if (alreadySpent >= SESSION_CAP) return;
+        cap = bound(cap, alreadySpent + 1, SESSION_CAP);
+        vm.prank(actor);
+        StrategyVault(vault).setSession(token, cap, cap, type(uint64).max);
+    }
+
+    function grantFromAnyCaller(uint256 actorSeed, uint256 callerSeed, uint256 amount) external {
+        address actor = actors[bound(actorSeed, 0, 2)];
+        address vault = factory.vaultOf(actor);
+        if (vault == address(0)) return;
+        address caller = _caller(callerSeed);
+        amount = bound(amount, 1, SESSION_CAP);
+
+        address accepted = StrategyVault(vault).acceptedExecutor();
+        bool authorised = caller == accepted && registry.isExecutor(caller);
+        (uint256 maxPerRun,, uint64 expiresAt) = StrategyVault(vault).sessionOf(address(usdc));
+        bool sessionOpen = expiresAt != 0 && block.timestamp <= expiresAt;
+
+        vm.prank(caller);
+        try StrategyVault(vault).approveAdapter(address(usdc), address(supplyAdapter), amount) {
+            if (!authorised || !sessionOpen) unauthorisedGrantSucceeded = true;
+            if (amount > maxPerRun) perRunCapExceeded = true;
+            vm.prank(caller);
+            StrategyVault(vault).approveAdapter(address(usdc), address(supplyAdapter), 0);
+        } catch {}
+    }
+
+    function executorCount() external view returns (uint256 count) {
+        return executors.length;
+    }
+
     function _runSingleStep(uint256 actorSeed, StepType stepType) private {
         address actor = actors[bound(actorSeed, 0, 2)];
+        address vault = _vaultWithSessions(actor);
         uint256 workflowId = _workflow(actor, stepType);
-        bool wasPaused = Executor(currentExecutor()).paused();
+        address accepted = StrategyVault(vault).acceptedExecutor();
+        if (accepted == address(0)) return;
+        bool wasPaused = Executor(accepted).paused();
         uint256 storedSteps = registry.get(workflowId).steps.length;
 
         vm.recordLogs();
         vm.prank(actor);
-        try IExecutor(currentExecutor()).run(workflowId) {
+        try IExecutor(accepted).run(workflowId) {
             if (wasPaused) pausedRunSucceeded = true;
             _checkRunLogs(storedSteps);
         } catch {}
@@ -179,6 +247,18 @@ contract Handler is CommonBase, StdCheats, StdUtils {
         }
     }
 
+    function _vaultWithSessions(address actor) private returns (address vault) {
+        vault = factory.vaultOf(actor);
+        if (vault != address(0)) return vault;
+
+        vault = factory.createVault(actor);
+        vm.startPrank(actor);
+        StrategyVault(vault).setSession(address(usdc), SESSION_CAP, SESSION_CAP, type(uint64).max);
+        StrategyVault(vault).setSession(address(aUsdc), SESSION_CAP, SESSION_CAP, type(uint64).max);
+        StrategyVault(vault).setSession(address(lpToken), SESSION_CAP, SESSION_CAP, type(uint64).max);
+        vm.stopPrank();
+    }
+
     function _workflow(address actor, StepType stepType) private returns (uint256 workflowId) {
         workflowId = workflowOf[actor][stepType];
         if (workflowId != 0) return workflowId;
@@ -200,5 +280,17 @@ contract Handler is CommonBase, StdCheats, StdUtils {
         vm.prank(actor);
         workflowId = registry.create(steps);
         workflowOf[actor][stepType] = workflowId;
+    }
+
+    function _caller(uint256 callerSeed) private view returns (address caller) {
+        if (callerSeed % 2 == 0) return actors[bound(callerSeed, 0, 2)];
+        return executors[bound(callerSeed, 0, executors.length - 1)];
+    }
+
+    function _token(uint256 tokenSeed) private view returns (address token) {
+        uint256 index = bound(tokenSeed, 0, 2);
+        if (index == 0) return address(usdc);
+        if (index == 1) return address(aUsdc);
+        return address(lpToken);
     }
 }

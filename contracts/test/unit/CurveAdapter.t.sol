@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {CurveAdapter} from "../../src/adapters/CurveAdapter.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {InsufficientOutput, NotExecutor, UnexpectedStepType} from "../../src/interfaces/Errors.sol";
@@ -45,9 +46,17 @@ contract CurveAdapterTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(stakeAdapter), StepType.STAKE, true);
         registry.setAdapterAllowed(address(claimAdapter), StepType.CLAIM, true);
+        vm.stopPrank();
+
+        address userVault = factory.createVault(user);
+        uint64 expiry = uint64(block.timestamp + 365 days);
+        vm.startPrank(user);
+        StrategyVault(userVault).setSession(address(usdc), type(uint128).max, type(uint128).max, expiry);
+        StrategyVault(userVault).setSession(address(lpToken), type(uint128).max, type(uint128).max, expiry);
+        StrategyVault(userVault).setSession(address(rewardToken), type(uint128).max, type(uint128).max, expiry);
         vm.stopPrank();
     }
 

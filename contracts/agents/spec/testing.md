@@ -28,7 +28,7 @@ Required cases per contract:
 - Every custom error in `interfaces.md` section 8 has a test asserting the selector.
 - Access control: a non owner, a non executor, and a random address each get the expected revert.
 - Paused system: execution reverts, vault withdrawal still works.
-- Executor swap: after `setExecutor`, the old executor can neither run workflows nor set allowances, and no allowance survives the swap.
+- Executor lifecycle: a retired executor can neither run workflows nor set allowances, a published but unaccepted executor is rejected by the vault, and no allowance survives an acceptance switch.
 
 ## 3. Fuzz tests
 

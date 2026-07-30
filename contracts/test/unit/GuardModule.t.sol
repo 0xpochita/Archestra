@@ -38,7 +38,7 @@ contract GuardModuleTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(guard), StepType.GUARD, true);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         vm.stopPrank();

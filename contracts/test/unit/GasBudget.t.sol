@@ -6,6 +6,7 @@ import {AaveAdapter} from "../../src/adapters/AaveAdapter.sol";
 import {CurveAdapter} from "../../src/adapters/CurveAdapter.sol";
 import {UniswapAdapter} from "../../src/adapters/UniswapAdapter.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
@@ -61,13 +62,20 @@ contract GasBudgetTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(trigger), StepType.TRIGGER, true);
         registry.setAdapterAllowed(address(executor), StepType.APPROVE, true);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         registry.setAdapterAllowed(address(swapAdapter), StepType.SWAP, true);
         registry.setAdapterAllowed(address(stakeAdapter), StepType.STAKE, true);
         registry.setAdapterAllowed(address(claimAdapter), StepType.CLAIM, true);
+        vm.stopPrank();
+
+        address userVault = factory.createVault(user);
+        uint64 expiry = uint64(block.timestamp + 365 days);
+        vm.startPrank(user);
+        StrategyVault(userVault).setSession(address(usdc), type(uint128).max, type(uint128).max, expiry);
+        StrategyVault(userVault).setSession(address(weth), type(uint128).max, type(uint128).max, expiry);
         vm.stopPrank();
     }
 

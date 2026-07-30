@@ -22,7 +22,7 @@ contract CurveAdapter is IStepAdapter {
     StepType private immutable _stepType;
 
     modifier onlyExecutor() {
-        if (msg.sender != registry.executor()) revert NotExecutor();
+        if (!registry.isExecutor(msg.sender)) revert NotExecutor();
         _;
     }
 

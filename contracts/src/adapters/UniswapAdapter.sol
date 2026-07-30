@@ -19,7 +19,7 @@ contract UniswapAdapter is IStepAdapter {
     ISwapRouter public immutable router;
 
     modifier onlyExecutor() {
-        if (msg.sender != registry.executor()) revert NotExecutor();
+        if (!registry.isExecutor(msg.sender)) revert NotExecutor();
         _;
     }
 

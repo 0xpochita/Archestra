@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {CurveAdapter} from "../../src/adapters/CurveAdapter.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
@@ -38,9 +39,14 @@ contract CurveAdapterFuzzTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(stakeAdapter), StepType.STAKE, true);
         vm.stopPrank();
+
+        address userVault = factory.createVault(user);
+        vm.prank(user);
+        StrategyVault(userVault)
+            .setSession(address(usdc), type(uint256).max, type(uint256).max, uint64(block.timestamp + 365 days));
     }
 
     function testFuzz_StakedPositionMatchesTheDeposit(uint256 balance, uint256 amount) public {

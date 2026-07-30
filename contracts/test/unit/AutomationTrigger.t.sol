@@ -3,9 +3,10 @@ pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {VaultFactory} from "../../src/core/VaultFactory.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
-import {NoTriggerStep, NotOwner, TriggerNotDue} from "../../src/interfaces/Errors.sol";
+import {NoTriggerStep, NotOwner, SystemPaused, TriggerNotDue} from "../../src/interfaces/Errors.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
 import {AutomationTrigger} from "../../src/modules/AutomationTrigger.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -18,6 +19,8 @@ contract AutomationTriggerTest is Test {
     AutomationTrigger internal trigger;
     MockERC20 internal usdc;
     MockStepAdapter internal supplyAdapter;
+
+    address internal userVault;
 
     address internal admin = makeAddr("admin");
     address internal user = makeAddr("user");
@@ -40,7 +43,7 @@ contract AutomationTriggerTest is Test {
 
         vm.startPrank(admin);
         registry.grantRole(registry.CURATOR_ROLE(), admin);
-        registry.setExecutor(address(executor));
+        registry.publishExecutor(address(executor));
         registry.setAdapterAllowed(address(trigger), StepType.TRIGGER, true);
         registry.setAdapterAllowed(address(supplyAdapter), StepType.SUPPLY, true);
         vm.stopPrank();
@@ -50,6 +53,11 @@ contract AutomationTriggerTest is Test {
         steps[1] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
         vm.prank(user);
         workflowId = registry.create(steps);
+
+        userVault = registry.get(workflowId).vault;
+        vm.prank(user);
+        StrategyVault(userVault)
+            .setSession(address(usdc), type(uint128).max, type(uint128).max, uint64(block.timestamp + 365 days));
     }
 
     function test_CheckUpkeepFollowsTheSchedule() public {
@@ -127,5 +135,83 @@ contract AutomationTriggerTest is Test {
 
         vm.expectRevert(NoTriggerStep.selector);
         trigger.performUpkeep(abi.encode(plainWorkflowId));
+    }
+
+    function test_ScheduledRunStaysOnTheAcceptedExecutorAfterANewerPublish() public {
+        Executor newExecutor = _publishAndPause();
+
+        vm.warp(startAt);
+        trigger.performUpkeep(abi.encode(workflowId));
+
+        assertEq(supplyAdapter.executeCount(), 1);
+        assertEq(StrategyVault(userVault).acceptedExecutor(), address(executor));
+        assertEq(registry.executor(), address(newExecutor));
+    }
+
+    function test_ScheduledRunFollowsTheOwnerToTheAcceptedExecutor() public {
+        Executor newExecutor = new Executor(address(registry), admin);
+        bytes32 pauserRole = executor.PAUSER_ROLE();
+        vm.startPrank(admin);
+        registry.publishExecutor(address(newExecutor));
+        executor.grantRole(pauserRole, admin);
+        executor.pause();
+        vm.stopPrank();
+
+        vm.prank(user);
+        StrategyVault(userVault).acceptExecutor(address(newExecutor));
+
+        vm.warp(startAt);
+        trigger.performUpkeep(abi.encode(workflowId));
+        assertEq(supplyAdapter.executeCount(), 1);
+        assertTrue(executor.paused());
+    }
+
+    function test_RevertWhen_PerformUpkeepRoutesToAPausedAcceptedExecutor() public {
+        bytes32 pauserRole = executor.PAUSER_ROLE();
+        vm.startPrank(admin);
+        executor.grantRole(pauserRole, admin);
+        executor.pause();
+        vm.stopPrank();
+
+        vm.warp(startAt);
+        vm.expectRevert(SystemPaused.selector);
+        trigger.performUpkeep(abi.encode(workflowId));
+    }
+
+    function test_CheckUpkeepIsFalseWhenTheAcceptedExecutorIsRetired() public {
+        vm.warp(startAt);
+        (bool needed,) = trigger.checkUpkeep(abi.encode(workflowId));
+        assertTrue(needed);
+
+        vm.prank(admin);
+        registry.retireExecutor(address(executor));
+
+        (needed,) = trigger.checkUpkeep(abi.encode(workflowId));
+        assertFalse(needed);
+    }
+
+    function test_CheckUpkeepIsFalseWhenNoExecutorWasEverAccepted() public {
+        vm.prank(admin);
+        registry.retireExecutor(address(executor));
+
+        Step[] memory steps = new Step[](2);
+        steps[0] = Step(StepType.TRIGGER, address(trigger), abi.encode(uint64(3600), startAt));
+        steps[1] = Step(StepType.SUPPLY, address(supplyAdapter), abi.encode(address(usdc), uint256(1e6)));
+        vm.prank(stranger);
+        uint256 orphanWorkflowId = registry.create(steps);
+
+        vm.warp(startAt);
+        (bool needed,) = trigger.checkUpkeep(abi.encode(orphanWorkflowId));
+        assertFalse(needed);
+    }
+
+    function _publishAndPause() internal returns (Executor newExecutor) {
+        newExecutor = new Executor(address(registry), admin);
+        bytes32 pauserRole = newExecutor.PAUSER_ROLE();
+        vm.startPrank(admin);
+        registry.publishExecutor(address(newExecutor));
+        newExecutor.grantRole(pauserRole, admin);
+        newExecutor.pause();
+        vm.stopPrank();
     }
 }

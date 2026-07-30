@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {Executor} from "../src/core/Executor.sol";
+import {StrategyVault} from "../src/core/StrategyVault.sol";
 import {WorkflowRegistry} from "../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../src/interfaces/Types.sol";
 import {MockERC20} from "../test/mocks/MockERC20.sol";
@@ -50,6 +51,9 @@ contract SmokeRun is Script {
         uint256 workflowId = registry.create(steps);
         address vault = registry.get(workflowId).vault;
         usdc.mint(vault, 1000e6);
+        uint64 sessionExpiry = uint64(block.timestamp + 1 days);
+        StrategyVault(vault).setSession(address(usdc), type(uint128).max, type(uint128).max, sessionExpiry);
+        StrategyVault(vault).setSession(address(weth), type(uint128).max, type(uint128).max, sessionExpiry);
         bytes32 runId = executor.run(workflowId);
         vm.stopBroadcast();
 
