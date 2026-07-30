@@ -136,6 +136,7 @@
       "error": null
     }
   ],
+  "staleAddressWarning": "This fixture was captured on the pre session layer deployment. The event shapes and the position ordering are unchanged and still authoritative for indexer mapping, but every address in it belongs to the retired deployment. Read exports/addresses.arc-testnet.json for the live addresses.",
   "notes": [
     "run_steps.gasUsed per step is null on chain: a run is one transaction, only the total 685001 exists. The backend may keep per step gas null or attribute the total to the run.",
     "kind is the studio block kind mapped from stepType via the table in exports/README.md.",

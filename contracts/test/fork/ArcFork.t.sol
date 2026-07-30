@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {Executor} from "../../src/core/Executor.sol";
+import {StrategyVault} from "../../src/core/StrategyVault.sol";
 import {WorkflowRegistry} from "../../src/core/WorkflowRegistry.sol";
 import {Step, StepType} from "../../src/interfaces/Types.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -50,6 +51,12 @@ contract ArcForkTest is Test {
         workflowId = registry.create(steps);
         vault = registry.get(workflowId).vault;
         usdc.mint(vault, balance);
+
+        uint64 expiry = uint64(block.timestamp + 365 days);
+        vm.startPrank(forkUser);
+        StrategyVault(vault).setSession(address(usdc), type(uint128).max, type(uint128).max, expiry);
+        StrategyVault(vault).setSession(address(aUsdc), type(uint128).max, type(uint128).max, expiry);
+        vm.stopPrank();
     }
 
     function test_ForkAaveSupplyMovesRealVaultBalances() public {
