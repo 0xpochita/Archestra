@@ -4,6 +4,8 @@ Dokumen ini khusus hal-hal yang menyentuh backend. Untuk alamat kontrak, tabel e
 
 Yang perlu dibaca sekali sebelum mulai: `contracts/exports/README.md`. Yang bisa langsung diimpor: `contracts/exports/abi/*.json` dan `contracts/exports/addresses.arc-testnet.json`.
 
+Pilihan file ABI: pakai `Executor.json` untuk semua event run dan untuk `estimate`, `WorkflowRegistry.json` untuk `get` dan `executor`, `StrategyVault.json` kalau perlu membaca sesi (`sessionOf`, `sessionSpentToday`) atau event `Deposited` dan `Withdrawn`, dan `DemoToken.json` untuk token demo. File berawalan `I` adalah versi interface yang lebih ramping dan tidak memuat fungsi tambahan itu.
+
 ---
 
 ## 1. Baca ini dulu: `ChainAdapter` sekarang tidak cocok dengan kenyataan on chain

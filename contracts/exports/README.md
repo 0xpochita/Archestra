@@ -2,7 +2,7 @@
 
 Everything the backend needs to build `ArcChainAdapter` and the indexer, with no Solidity reading required.
 
-- ABIs: `exports/abi/*.json` (interface ABIs, stable across redeploys)
+- ABIs: `exports/abi/*.json`. The `I` prefixed files are interface ABIs, stable across redeploys and enough for the core flow. The unprefixed files are the concrete contracts and are the only place some members exist: `sessionOf`, `sessionSpentToday`, `Deposited` and `Withdrawn` live in `StrategyVault.json`, `pause` state in `Executor.json`, `setAdapterAllowed` and `MAX_STEPS` in `WorkflowRegistry.json`. `DemoToken.json` is the ERC20 plus `mint` of the testnet demo tokens.
 - Addresses: `exports/addresses.arc-testnet.json` (chain id `5042002`, RPC `https://rpc.testnet.arc.io`)
 - The backend configures exactly one address: `core.registry`. Resolve the latest published executor with the `executor()` view call at boot and treat `ExecutorPublished` and `ExecutorRetired` as config reload triggers. Key on `runId`, never on the emitting address.
 - `executor()` is discovery only. The executor a given vault actually obeys is `IStrategyVault.acceptedExecutor()`, so send a run through that address, not through `executor()`. `executor()` returns the zero address when the latest published version has been retired and no replacement is published yet.

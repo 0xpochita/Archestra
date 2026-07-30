@@ -9,6 +9,19 @@ Sumber file yang bisa langsung diimpor:
 - Fixture event untuk tes indexer tanpa chain: `contracts/exports/fixtures/run-fixture.json`
 - Referensi teknis lengkap: `contracts/exports/README.md`
 
+**ABI mana yang dipakai untuk apa.** Yang berawalan `I` adalah interface, isinya cukup untuk alur inti dan stabil antar redeploy. Yang tanpa `I` adalah kontrak konkret, dipakai kalau butuh fungsi tambahan:
+
+| File ABI | Dipakai untuk |
+| --- | --- |
+| `WorkflowRegistry.json` | `create`, `get`, `executor`, `isExecutor`, `isAdapterAllowed`, `MAX_STEPS` |
+| `StrategyVault.json` | `setSession`, `revokeSession`, `sessionOf`, `sessionSpentToday`, `acceptedExecutor`, `acceptExecutor`, `deposit`, `withdraw`, event `Deposited` dan `Withdrawn` |
+| `Executor.json` | `run`, `estimate`, `paused`, dan semua event run |
+| `VaultFactory.json` | `vaultOf`, `predictVault` |
+| `DemoToken.json` | token demo di testnet: `mint`, `balanceOf`, `approve`, `transfer`, `decimals` |
+| `AutomationTrigger.json` | `checkUpkeep`, `performUpkeep`, `lastRunAt` |
+
+Catatan: `sessionOf`, `sessionSpentToday`, `Deposited`, dan `Withdrawn` hanya ada di `StrategyVault.json`, tidak ada di `IStrategyVault.json`. Kalau memakai yang interface saja, panggilan itu akan gagal ditemukan.
+
 ---
 
 ## 1. Jaringan
