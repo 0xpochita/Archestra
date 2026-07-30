@@ -49,11 +49,10 @@ contract UniswapAdapterFuzzTest is Test {
         vm.stopPrank();
     }
 
-    function testFuzz_OutputMeetsMinimumOrReverts(uint256 amountIn, uint256 minAmountOut) public {
-        amountIn = bound(amountIn, 1, type(uint96).max);
-        minAmountOut = bound(minAmountOut, 1, type(uint96).max);
-        uint256 expectedOut = (amountIn * router.rate()) / 1e18;
-
+    function _swapWorkflow(uint256 amountIn, uint256 minAmountOut)
+        internal
+        returns (uint256 workflowId, address vault)
+    {
         Step[] memory steps = new Step[](1);
         steps[0] = Step(
             StepType.SWAP,
@@ -61,19 +60,37 @@ contract UniswapAdapterFuzzTest is Test {
             abi.encode(address(usdc), address(weth), amountIn, minAmountOut, uint24(500), uint64(block.timestamp + 60))
         );
         vm.prank(user);
-        uint256 workflowId = registry.create(steps);
-        address vault = registry.get(workflowId).vault;
+        workflowId = registry.create(steps);
+        vault = registry.get(workflowId).vault;
         usdc.mint(vault, amountIn);
+    }
 
-        if (expectedOut < minAmountOut) {
-            vm.prank(user);
-            vm.expectRevert(abi.encodeWithSelector(InsufficientOutput.selector, expectedOut, minAmountOut));
-            executor.run(workflowId);
-        } else {
-            vm.prank(user);
-            executor.run(workflowId);
-            assertEq(weth.balanceOf(vault), expectedOut);
-            assertEq(usdc.allowance(vault, address(adapter)), 0);
-        }
+    function testFuzz_OutputIsAtLeastTheMinimum(uint256 amountIn, uint256 minAmountOut) public {
+        amountIn = bound(amountIn, 1e12, type(uint96).max);
+        uint256 expectedOut = (amountIn * router.rate()) / 1e18;
+        minAmountOut = bound(minAmountOut, 1, expectedOut);
+
+        (uint256 workflowId, address vault) = _swapWorkflow(amountIn, minAmountOut);
+        vm.prank(user);
+        executor.run(workflowId);
+
+        assertGe(weth.balanceOf(vault), minAmountOut);
+        assertEq(weth.balanceOf(vault), expectedOut);
+        assertEq(usdc.allowance(vault, address(adapter)), 0);
+    }
+
+    function testFuzz_RevertWhen_OutputBelowTheMinimum(uint256 amountIn, uint256 shortfall) public {
+        amountIn = bound(amountIn, 1, type(uint96).max);
+        uint256 expectedOut = (amountIn * router.rate()) / 1e18;
+        shortfall = bound(shortfall, 1, type(uint96).max);
+        uint256 minAmountOut = expectedOut + shortfall;
+
+        (uint256 workflowId, address vault) = _swapWorkflow(amountIn, minAmountOut);
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(InsufficientOutput.selector, expectedOut, minAmountOut));
+        executor.run(workflowId);
+
+        assertEq(weth.balanceOf(vault), 0);
+        assertEq(usdc.allowance(vault, address(adapter)), 0);
     }
 }
