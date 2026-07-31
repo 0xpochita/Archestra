@@ -10,14 +10,20 @@
     "format": "biome format --write",
     "format:check": "biome format",
     "type-check": "tsc --noEmit",
-    "prepare": "cd .. && husky frontend/.husky"
+    "sync:contracts": "node scripts/sync-contracts.mjs",
+    "prepare": "cd .. && husky frontend/.husky",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
     "framer-motion": "^12.42.2",
     "next": "16.2.12",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-icons": "^5.7.0"
+    "react-icons": "^5.7.0",
+    "viem": "^2.55.10",
+    "wagmi": "^3.7.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
@@ -28,6 +34,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "husky": "^9.1.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
