@@ -1,0 +1,195 @@
+import {
+  type Address,
+  encodeAbiParameters,
+  getAddress,
+  type Hex,
+  maxUint256,
+  parseAbiParameters,
+  parseUnits,
+  stringToHex,
+  zeroAddress,
+} from "viem";
+import {
+  type AmountInput,
+  type StepConfig,
+  stepConfigSchema,
+} from "@/lib/schemas/step-config";
+import type { BlockKind } from "@/types/block";
+import {
+  CURVE_GAUGE_ADDRESS,
+  CURVE_POOL_ADDRESS,
+  STEP_ADAPTER,
+  STEP_TYPE,
+} from "./adapters";
+import { TOKENS, type TokenId } from "./tokens";
+
+export const MAX_STEPS = 16;
+export const FEED_DECIMALS = 8;
+
+export interface EncodedStep {
+  stepType: number;
+  adapter: Address;
+  params: Hex;
+}
+
+export interface EncodeContext {
+  nowSeconds: number;
+}
+
+export interface StepProblem {
+  nodeId: string;
+  message: string;
+}
+
+export interface EncodeInput {
+  id: string;
+  kind: BlockKind;
+  config: StepConfig;
+}
+
+export type EncodeResult =
+  | { ok: true; steps: EncodedStep[] }
+  | { ok: false; problems: StepProblem[] };
+
+const resolveAmount = (amount: AmountInput, tokenId: TokenId) =>
+  amount.mode === "max"
+    ? maxUint256
+    : parseUnits(amount.value, TOKENS[tokenId].decimals);
+
+function encodeParams(config: StepConfig, context: EncodeContext): Hex {
+  switch (config.kind) {
+    case "trigger":
+      return encodeAbiParameters(parseAbiParameters("uint64, uint64"), [
+        BigInt(config.intervalSeconds),
+        BigInt(config.startAt),
+      ]);
+    case "approve":
+      return encodeAbiParameters(
+        parseAbiParameters("address, address, uint256"),
+        [
+          TOKENS[config.token].address,
+          STEP_ADAPTER[config.spender],
+          resolveAmount(config.amount, config.token),
+        ],
+      );
+    case "deposit":
+      return encodeAbiParameters(parseAbiParameters("address, uint256"), [
+        TOKENS[config.asset].address,
+        resolveAmount(config.amount, config.asset),
+      ]);
+    case "swap":
+      return encodeAbiParameters(
+        parseAbiParameters(
+          "address, address, uint256, uint256, uint24, uint64",
+        ),
+        [
+          TOKENS[config.tokenIn].address,
+          TOKENS[config.tokenOut].address,
+          resolveAmount(config.amountIn, config.tokenIn),
+          parseUnits(config.minAmountOut, TOKENS[config.tokenOut].decimals),
+          config.feeTier,
+          BigInt(context.nowSeconds + config.deadlineDays * 86_400),
+        ],
+      );
+    case "yield":
+      return encodeAbiParameters(
+        parseAbiParameters("address, address, uint256, uint256"),
+        [
+          CURVE_POOL_ADDRESS,
+          CURVE_GAUGE_ADDRESS,
+          resolveAmount(config.amount, "usdc"),
+          parseUnits(config.minLpOut, TOKENS.lpToken.decimals),
+        ],
+      );
+    case "harvest":
+      return encodeAbiParameters(parseAbiParameters("address, uint256"), [
+        CURVE_GAUGE_ADDRESS,
+        parseUnits(config.minValueOut, TOKENS.rewardToken.decimals),
+      ]);
+    case "bridge":
+      return encodeAbiParameters(
+        parseAbiParameters("uint64, address, address, uint256"),
+        [
+          BigInt(config.destinationChainSelector),
+          getAddress(config.receiver),
+          TOKENS[config.token].address,
+          resolveAmount(config.amount, config.token),
+        ],
+      );
+    case "withdraw":
+      return encodeAbiParameters(parseAbiParameters("address, uint256"), [
+        TOKENS[config.asset].address,
+        resolveAmount(config.amount, config.asset),
+      ]);
+    case "condition":
+      return encodeAbiParameters(
+        parseAbiParameters("address, int256, uint8, uint64"),
+        [
+          getAddress(config.feed),
+          parseUnits(config.bound, FEED_DECIMALS),
+          config.comparator,
+          BigInt(config.maxStaleSeconds),
+        ],
+      );
+    case "alert":
+      return encodeAbiParameters(parseAbiParameters("bytes32, bytes32"), [
+        stringToHex(config.channel, { size: 32 }),
+        stringToHex(config.messageId, { size: 32 }),
+      ]);
+  }
+}
+
+export function encodeStep(
+  config: StepConfig,
+  context: EncodeContext,
+): EncodedStep {
+  return {
+    stepType: STEP_TYPE[config.kind],
+    adapter: STEP_ADAPTER[config.kind],
+    params: encodeParams(config, context),
+  };
+}
+
+function collectConfigProblems(step: EncodeInput): StepProblem[] {
+  const parsed = stepConfigSchema.safeParse(step.config);
+  if (!parsed.success) {
+    return parsed.error.issues.map((issue) => ({
+      nodeId: step.id,
+      message: `${issue.path.join(".") || "config"} ${issue.message}`,
+    }));
+  }
+
+  if (step.config.kind === "condition" && step.config.feed === zeroAddress) {
+    return [
+      {
+        nodeId: step.id,
+        message:
+          "needs a price feed address, and Arc testnet has none deployed yet",
+      },
+    ];
+  }
+
+  if (step.config.kind === "bridge" && step.config.receiver === zeroAddress) {
+    return [{ nodeId: step.id, message: "needs a receiver address" }];
+  }
+
+  return [];
+}
+
+export function collectStepProblems(steps: EncodeInput[]): StepProblem[] {
+  return steps.flatMap(collectConfigProblems);
+}
+
+export function encodeWorkflow(
+  steps: EncodeInput[],
+  context: EncodeContext,
+): EncodeResult {
+  const problems = collectStepProblems(steps);
+
+  if (problems.length > 0) return { ok: false, problems };
+
+  return {
+    ok: true,
+    steps: steps.map((step) => encodeStep(step.config, context)),
+  };
+}
