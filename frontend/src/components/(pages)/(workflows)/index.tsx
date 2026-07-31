@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
+import { WalletButton } from "@/components/ui/WalletButton";
 import { LANDING_PATH } from "@/constants/assets";
 import { TemplateGallery } from "./components/TemplateGallery";
 import { WorkflowsSidebar } from "./components/WorkflowsSidebar";
@@ -17,6 +18,7 @@ export function WorkflowsPage() {
         brandHref={LANDING_PATH}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
+        actions={<WalletButton />}
       />
       <div className="flex min-h-0 flex-1">
         <WorkflowsSidebar isOpen={isSidebarOpen} />

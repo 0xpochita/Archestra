@@ -219,7 +219,9 @@ Plus the run receipt panel: transaction hash, total gas, steps executed, and the
 
 ## 13. Rendering strategy
 
-`/` and `/workflows` stay static. `/studio` stays a static shell; the wallet subtree is a client island mounted under `ChainProvider`. `'use client'` stays at the leaves as rules section 8 requires, and `ChainProvider` wraps only the studio, not the root layout. No route becomes `force-dynamic`.
+`/`, `/workflows` and `/studio` stay static. `ChainProvider` sits in the `(main)` route group layout, so the studio and the template gallery share one connection and one query cache, and a wallet connected on either page stays connected across the navigation. The landing route lives in its own group and ships no wallet bytes at all: 781 kB against 1794 kB for the gallery. `'use client'` stays at the leaves as rules section 8 requires, and no route becomes `force-dynamic`.
+
+`RainbowKitProvider` renders a real `div[data-rk]`, not a context only wrapper, so it has to sit outside the `h-svh` container rather than between it and the page content. Putting it in the middle breaks the flex height chain and collapses the canvas.
 
 ## 14. Security notes
 

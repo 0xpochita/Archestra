@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
 import { Icon } from "@/components/ui/Icon";
 import { popoverVariants } from "@/components/ui/motion";
+import { WalletButton } from "@/components/ui/WalletButton";
 import { WORKFLOWS_PATH } from "@/constants/assets";
 import type { RunOutcome } from "@/lib/chain/decode-run";
 import { getStrategyTokens } from "@/lib/step-config";
@@ -23,7 +24,6 @@ import { Sidebar } from "./Sidebar";
 import { SimulationModal } from "./SimulationModal";
 import { StrategyTemplateModal } from "./StrategyTemplateModal";
 import { VaultPanel } from "./VaultPanel";
-import { WalletButton } from "./WalletButton";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowTitle } from "./WorkflowTitle";
 
