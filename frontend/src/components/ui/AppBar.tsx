@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ARC_LOGO_SRC,
   ARCHESTRA_LOGO_SRC,
@@ -13,6 +14,7 @@ interface AppBarProps {
   brandHref: string;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
+  actions?: ReactNode;
 }
 
 export function AppBar({
@@ -20,6 +22,7 @@ export function AppBar({
   brandHref,
   isSidebarOpen,
   onToggleSidebar,
+  actions,
 }: AppBarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-shell px-3">
@@ -81,19 +84,18 @@ export function AppBar({
       </nav>
 
       <div className="ml-auto flex items-center gap-3">
-        <span className="flex items-center gap-2 border border-line bg-surface px-3 py-1.5 text-xs text-ink-muted">
-          <Image
-            src={ARC_LOGO_SRC}
-            alt="Arc"
-            width={16}
-            height={16}
-            className="size-4"
-          />
-          Arc Testnet
-        </span>
-        <span className="grid size-8 place-items-center rounded-full bg-surface-raised text-xs font-semibold text-ink-muted">
-          AR
-        </span>
+        {actions ?? (
+          <span className="flex items-center gap-2 border border-line bg-surface px-3 py-1.5 text-xs text-ink-muted">
+            <Image
+              src={ARC_LOGO_SRC}
+              alt="Arc"
+              width={16}
+              height={16}
+              className="size-4"
+            />
+            Arc Testnet
+          </span>
+        )}
       </div>
     </header>
   );

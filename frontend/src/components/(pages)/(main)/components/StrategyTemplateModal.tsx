@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Fragment, useEffect, useId } from "react";
+import { BlockGlyph } from "@/components/ui/BlockGlyph";
 import { Icon } from "@/components/ui/Icon";
 import {
   backdropVariants,
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/motion";
 import { STRATEGY_TEMPLATES } from "../constants";
 import type { BlockKind } from "../types";
-import { BlockGlyph } from "./BlockGlyph";
 
 interface StrategyTemplateModalProps {
   isLocked: boolean;

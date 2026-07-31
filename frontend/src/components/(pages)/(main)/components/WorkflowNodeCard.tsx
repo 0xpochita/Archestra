@@ -12,6 +12,7 @@ interface WorkflowNodeCardProps {
   node: WorkflowNode;
   isSelected: boolean;
   isLocked: boolean;
+  hasProblem: boolean;
   runState?: NodeRunState;
   zoom: number;
   onSelect: (id: string) => void;
@@ -36,6 +37,7 @@ export function WorkflowNodeCard({
   node,
   isSelected,
   isLocked,
+  hasProblem,
   runState,
   zoom,
   onSelect,
@@ -82,6 +84,7 @@ export function WorkflowNodeCard({
       ? "border-ink ring-2 ring-ink/20"
       : "border-line hover:shadow-md",
     runState === "running" ? "ring-2 ring-ink/30" : "",
+    hasProblem ? "border-dashed border-ink" : "",
   ].join(" ");
 
   return (
@@ -95,6 +98,14 @@ export function WorkflowNodeCard({
       className={shellClassName}
       onPointerDown={handlePointerDown}
     >
+      {hasProblem ? (
+        <span
+          title="This block cannot be encoded yet"
+          className="absolute -top-2 -left-2 grid size-5 place-items-center border border-ink bg-shell text-[11px] font-semibold text-ink"
+        >
+          !
+        </span>
+      ) : null}
       {node.kind === "trigger" ? null : (
         <span className="absolute top-1/2 -left-1 size-2 -translate-y-1/2 bg-line-strong" />
       )}

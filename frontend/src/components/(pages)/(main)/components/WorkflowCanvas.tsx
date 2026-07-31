@@ -12,6 +12,7 @@ interface WorkflowCanvasProps {
   viewport: Viewport;
   selectedNodeId: string | null;
   runState: Record<string, NodeRunState>;
+  problemNodeIds: string[];
   isLocked: boolean;
   onPan: (deltaX: number, deltaY: number) => void;
   onZoom: (delta: number, anchorX: number, anchorY: number) => void;
@@ -27,6 +28,7 @@ export function WorkflowCanvas({
   viewport,
   selectedNodeId,
   runState,
+  problemNodeIds,
   isLocked,
   onPan,
   onZoom,
@@ -138,6 +140,7 @@ export function WorkflowCanvas({
             node={node}
             isSelected={node.id === selectedNodeId}
             isLocked={isLocked}
+            hasProblem={problemNodeIds.includes(node.id)}
             runState={runState[node.id]}
             zoom={viewport.zoom}
             onSelect={onSelect}

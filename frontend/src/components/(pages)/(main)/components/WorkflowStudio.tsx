@@ -1,27 +1,49 @@
 "use client";
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
 import { Icon } from "@/components/ui/Icon";
 import { popoverVariants } from "@/components/ui/motion";
 import { WORKFLOWS_PATH } from "@/constants/assets";
-import { BREADCRUMB_TRAIL, WORKFLOW_UPDATED_LABEL } from "../constants";
+import type { RunOutcome } from "@/lib/chain/decode-run";
+import { getStrategyTokens } from "@/lib/step-config";
+import { BREADCRUMB_TRAIL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
 import { AiWorkflowModal } from "./AiWorkflowModal";
 import { BlockDock } from "./BlockDock";
 import { BlockLibraryModal } from "./BlockLibraryModal";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { ExecutorBanner } from "./ExecutorBanner";
 import { InspectorPanel } from "./InspectorPanel";
+import { OnChainStatus } from "./OnChainStatus";
+import { PreflightNotice } from "./PreflightNotice";
+import { RunReceiptPanel } from "./RunReceiptPanel";
 import { Sidebar } from "./Sidebar";
 import { SimulationModal } from "./SimulationModal";
 import { StrategyTemplateModal } from "./StrategyTemplateModal";
+import { VaultPanel } from "./VaultPanel";
+import { WalletButton } from "./WalletButton";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowTitle } from "./WorkflowTitle";
 
 export function WorkflowStudio() {
   const studio = useWorkflowStudio();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isActivateOpen, setIsActivateOpen] = useState(false);
+  const [receipt, setReceipt] = useState<RunOutcome | null>(null);
+  const strategyTokens = getStrategyTokens(
+    studio.preflight.orderedNodes.map((node) => node.config),
+  );
+
+  const playRun = studio.playRun;
+  const handleRunOutcome = useCallback(
+    (outcome: RunOutcome, nodeIds: string[]) => {
+      setReceipt(outcome);
+      playRun(nodeIds);
+    },
+    [playRun],
+  );
 
   return (
     <MotionConfig reducedMotion="user">
@@ -30,6 +52,7 @@ export function WorkflowStudio() {
         brandHref={WORKFLOWS_PATH}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
+        actions={<WalletButton />}
       />
       <div className="flex min-h-0 flex-1">
         <Sidebar
@@ -54,10 +77,15 @@ export function WorkflowStudio() {
             />
 
             <div className="ml-auto flex items-center gap-4">
-              <span className="hidden items-center gap-1.5 text-xs text-ink-subtle md:flex">
-                <Icon name="clock" className="size-3.5" />
-                {WORKFLOW_UPDATED_LABEL}
-              </span>
+              <OnChainStatus
+                orderedNodes={studio.preflight.orderedNodes}
+                canEncode={studio.preflight.canEncode}
+                tokenIds={strategyTokens}
+                onRequestActivate={() => setIsActivateOpen(true)}
+                onRunOutcome={handleRunOutcome}
+                onMockRun={studio.runWorkflow}
+                isMockRunning={studio.isRunning}
+              />
               <button
                 type="button"
                 onClick={studio.openSimulation}
@@ -66,20 +94,26 @@ export function WorkflowStudio() {
                 <Icon name="sparkle" className="size-4" />
                 Simulate strategy
               </button>
-              <button
-                type="button"
-                onClick={studio.runWorkflow}
-                disabled={studio.isRunning}
-                className="flex items-center gap-2 bg-brand px-4 py-2 text-sm font-medium text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60"
-              >
-                <Icon
-                  name={studio.isRunning ? "loader" : "play"}
-                  className={`size-4 ${studio.isRunning ? "animate-spin" : ""}`}
-                />
-                {studio.isRunning ? "Running" : "Run strategy"}
-              </button>
             </div>
           </div>
+
+          <ExecutorBanner />
+
+          <AnimatePresence>
+            {receipt ? (
+              <RunReceiptPanel
+                key="run-receipt"
+                outcome={receipt}
+                onClose={() => setReceipt(null)}
+              />
+            ) : null}
+          </AnimatePresence>
+
+          <PreflightNotice
+            problems={studio.preflight.problems}
+            warnings={studio.preflight.warnings}
+            onSelectNode={studio.selectNode}
+          />
 
           <div className="flex min-h-0 flex-1">
             <section className="relative min-w-0 flex-1">
@@ -89,6 +123,9 @@ export function WorkflowStudio() {
                 viewport={studio.viewport}
                 selectedNodeId={studio.selectedNodeId}
                 runState={studio.runState}
+                problemNodeIds={studio.preflight.problems.flatMap((problem) =>
+                  problem.nodeId ? [problem.nodeId] : [],
+                )}
                 isLocked={studio.isLocked}
                 onPan={studio.panBy}
                 onZoom={studio.zoomBy}
@@ -145,12 +182,16 @@ export function WorkflowStudio() {
                 node={studio.selectedNode}
                 onClose={() => studio.selectNode(null)}
                 onUpdateText={studio.updateNodeText}
-                onUpdateParam={studio.updateParam}
-                onAddParam={studio.addParam}
-                onRemoveParam={studio.removeParam}
+                onUpdateConfig={studio.updateConfig}
                 onRemoveNode={studio.removeNode}
               />
-            ) : null}
+            ) : (
+              <VaultPanel
+                tokenIds={strategyTokens}
+                isActivateOpen={isActivateOpen}
+                onActivateOpenChange={setIsActivateOpen}
+              />
+            )}
           </div>
         </div>
 

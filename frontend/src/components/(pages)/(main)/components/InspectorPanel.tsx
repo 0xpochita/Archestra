@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { FIELD_CLASS } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
+import type { StepConfig } from "@/lib/schemas/step-config";
+import { describeStepConfig } from "@/lib/step-config";
 import { BLOCK_CATALOG } from "../constants";
-import type { BlockParam, WorkflowNode } from "../types";
+import type { WorkflowNode } from "../types";
 import { getOutputRows, toConfigLines } from "../utils";
+import { StepConfigFields } from "./StepConfigFields";
 
 type InspectorTab = "input" | "output";
 
@@ -15,21 +19,12 @@ interface InspectorPanelProps {
     id: string,
     patch: { title?: string; subtitle?: string },
   ) => void;
-  onUpdateParam: (
-    id: string,
-    index: number,
-    patch: Partial<BlockParam>,
-  ) => void;
-  onAddParam: (id: string) => void;
-  onRemoveParam: (id: string, index: number) => void;
+  onUpdateConfig: (id: string, config: StepConfig) => void;
   onRemoveNode: (id: string) => void;
 }
 
 const SECTION_LABEL =
   "text-[10px] font-semibold tracking-[0.16em] text-ink-subtle uppercase";
-const FIELD_CLASS =
-  "h-9 w-full border border-line bg-surface-raised px-2.5 text-sm text-ink outline-none transition-colors focus:border-brand";
-
 function SettingRow({
   label,
   isOn,
@@ -67,9 +62,7 @@ export function InspectorPanel({
   node,
   onClose,
   onUpdateText,
-  onUpdateParam,
-  onAddParam,
-  onRemoveParam,
+  onUpdateConfig,
   onRemoveNode,
 }: InspectorPanelProps) {
   const [tab, setTab] = useState<InspectorTab>("input");
@@ -119,54 +112,20 @@ export function InspectorPanel({
                 : "border-transparent text-ink-subtle hover:text-ink-muted"
             }`}
           >
-            {value === "input" ? `Input (${node.params.length})` : "Output"}
+            {value === "input"
+              ? `Input (${describeStepConfig(node.config).length})`
+              : "Output"}
           </button>
         ))}
       </div>
 
       {tab === "input" ? (
-        <div className="space-y-2 px-4 py-4">
-          {node.params.map((param, index) => (
-            <div key={param.id} className="flex items-center gap-2">
-              <input
-                aria-label={`Field ${index + 1} name`}
-                value={param.label}
-                onChange={(event) =>
-                  onUpdateParam(node.id, index, { label: event.target.value })
-                }
-                className={FIELD_CLASS}
-              />
-              <input
-                aria-label={`Field ${index + 1} value`}
-                value={param.value}
-                onChange={(event) =>
-                  onUpdateParam(node.id, index, { value: event.target.value })
-                }
-                className={`${FIELD_CLASS} font-mono text-xs`}
-              />
-              <button
-                type="button"
-                aria-label={`Remove field ${index + 1}`}
-                onClick={() => onRemoveParam(node.id, index)}
-                className="grid size-8 shrink-0 place-items-center text-ink-subtle transition-colors hover:bg-surface-hover hover:text-ink"
-              >
-                <Icon name="trash" className="size-4" />
-              </button>
-            </div>
-          ))}
-          {node.params.length === 0 ? (
-            <p className="py-2 text-xs text-ink-subtle">
-              This block runs without inputs.
-            </p>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => onAddParam(node.id)}
-            className="flex items-center gap-1.5 pt-1 text-sm text-brand transition-opacity hover:opacity-80"
-          >
-            <Icon name="plus" className="size-4" />
-            Add Row
-          </button>
+        <div className="flex flex-col gap-4 px-4 py-4">
+          <StepConfigFields
+            idPrefix={node.id}
+            config={node.config}
+            onChange={(config) => onUpdateConfig(node.id, config)}
+          />
         </div>
       ) : (
         <dl className="space-y-2 px-4 py-4">

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import type { StepConfig } from "@/lib/schemas/step-config";
 import type { LogoName } from "@/types/logo";
 import {
   AI_RESPONSE_DELAY_MS,
@@ -24,7 +25,6 @@ import {
 } from "../constants";
 import type {
   BlockKind,
-  BlockParam,
   ChatMessage,
   NodeRunState,
   StrategyTemplate,
@@ -38,6 +38,7 @@ import {
   createNode,
   getExecutionOrder,
   getGraphBounds,
+  getPreflight,
   nameFromPlan,
   planBlocksFromPrompt,
   summarizePlan,
@@ -90,6 +91,7 @@ export function useWorkflowStudio() {
     useState<LogoName[]>(WORKFLOW_TOKENS);
 
   const graph = history.present;
+  const preflight = getPreflight(graph);
   const selectedNode =
     graph.nodes.find((node) => node.id === selectedNodeId) ?? null;
 
@@ -223,34 +225,13 @@ export function useWorkflowStudio() {
     setSelectedNodeId(null);
   };
 
-  const patchNode = (
-    id: string,
-    patch: (params: BlockParam[]) => BlockParam[],
-  ) =>
+  const updateConfig = (id: string, config: StepConfig) =>
     commit((current) => ({
       ...current,
       nodes: current.nodes.map((node) =>
-        node.id === id ? { ...node, params: patch(node.params) } : node,
+        node.id === id ? { ...node, config } : node,
       ),
     }));
-
-  const updateParam = (id: string, index: number, patch: Partial<BlockParam>) =>
-    patchNode(id, (params) =>
-      params.map((param, position) =>
-        position === index ? { ...param, ...patch } : param,
-      ),
-    );
-
-  const addParam = (id: string) =>
-    patchNode(id, (params) => [
-      ...params,
-      { id: nextId("param"), label: "New field", value: "" },
-    ]);
-
-  const removeParam = (id: string, index: number) =>
-    patchNode(id, (params) =>
-      params.filter((_, position) => position !== index),
-    );
 
   const updateNodeText = (
     id: string,
@@ -321,11 +302,16 @@ export function useWorkflowStudio() {
   const zoomTo = (zoom: number) =>
     zoomBy(clamp(zoom, ZOOM_MIN, ZOOM_MAX) - viewport.zoom);
 
-  const runWorkflow = () => {
-    if (isRunning || graph.nodes.length === 0) return;
-    runOrderRef.current = getExecutionOrder(graph);
+  const playRun = (nodeIds: string[]) => {
+    if (nodeIds.length === 0) return;
+    runOrderRef.current = nodeIds;
     setRunState({});
     setIsRunning(true);
+  };
+
+  const runWorkflow = () => {
+    if (isRunning || graph.nodes.length === 0) return;
+    playRun(getExecutionOrder(graph));
   };
 
   const sendPrompt = (prompt: string) => {
@@ -442,6 +428,7 @@ export function useWorkflowStudio() {
   return {
     canvasRef,
     graph,
+    preflight,
     viewport,
     selectedNode,
     selectedNodeId,
@@ -463,7 +450,6 @@ export function useWorkflowStudio() {
     canRedo: history.future.length > 0,
     zoomStep: ZOOM_STEP,
     addBlock,
-    addParam,
     beginHistoryEntry,
     centerView,
     fitView,
@@ -473,7 +459,7 @@ export function useWorkflowStudio() {
     panBy,
     redo,
     removeNode,
-    removeParam,
+    playRun,
     runWorkflow,
     selectNode: setSelectedNodeId,
     sendPrompt,
@@ -511,8 +497,8 @@ export function useWorkflowStudio() {
     },
     toggleLock: () => setIsLocked((locked) => !locked),
     undo,
+    updateConfig,
     updateNodeText,
-    updateParam,
     zoomBy,
   };
 }
