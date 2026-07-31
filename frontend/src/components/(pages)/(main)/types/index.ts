@@ -1,55 +1,20 @@
-import type { IconName } from "@/types/icon";
-import type { LogoImage, LogoName } from "@/types/logo";
+export type {
+  BlockDefinition,
+  BlockGroup,
+  BlockKind,
+  BlockParam,
+  StrategyTemplate,
+} from "@/types/block";
 
-export type BlockKind =
-  | "trigger"
-  | "approve"
-  | "deposit"
-  | "swap"
-  | "yield"
-  | "harvest"
-  | "bridge"
-  | "withdraw"
-  | "condition"
-  | "alert";
-
-export interface BlockParam {
-  id: string;
-  label: string;
-  value: string;
-}
-
-export interface BlockDefinition {
-  kind: BlockKind;
-  label: string;
-  group: string;
-  description: string;
-  icon: IconName;
-  logo?: LogoName;
-  logoImages?: LogoImage[];
-  subtitle: string;
-  params: BlockParam[];
-}
-
-export interface StrategyTemplate {
-  id: string;
-  name: string;
-  description: string;
-  tokens: LogoName[];
-  kinds: BlockKind[];
-}
-
-export interface BlockGroup {
-  name: string;
-  blocks: BlockDefinition[];
-}
+import type { StepConfig } from "@/lib/schemas/step-config";
+import type { BlockKind } from "@/types/block";
 
 export interface WorkflowNode {
   id: string;
   kind: BlockKind;
   title: string;
   subtitle: string;
-  params: BlockParam[];
+  config: StepConfig;
   x: number;
   y: number;
 }
@@ -99,4 +64,17 @@ export interface ChatMessage {
   id: string;
   role: ChatRole;
   text: string;
+}
+
+export interface GraphProblem {
+  nodeId?: string;
+  message: string;
+}
+
+export interface Preflight {
+  order: string[];
+  orderedNodes: WorkflowNode[];
+  problems: GraphProblem[];
+  warnings: GraphProblem[];
+  canEncode: boolean;
 }

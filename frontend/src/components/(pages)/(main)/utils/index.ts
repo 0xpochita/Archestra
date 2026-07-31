@@ -1,3 +1,5 @@
+import { collectStepProblems, MAX_STEPS } from "@/lib/chain/encode-steps";
+import { createDefaultStepConfig, describeStepConfig } from "@/lib/step-config";
 import {
   ALL_BLOCK_ORDER,
   BLOCK_CATALOG,
@@ -13,6 +15,8 @@ import type {
   BlockKind,
   EdgeGeometry,
   GraphBounds,
+  GraphProblem,
+  Preflight,
   WorkflowEdge,
   WorkflowGraph,
   WorkflowNode,
@@ -95,11 +99,7 @@ export function getExecutionOrder(graph: WorkflowGraph): string[] {
     }
   }
 
-  const unreached = graph.nodes
-    .map((node) => node.id)
-    .filter((id) => !order.includes(id));
-
-  return [...order, ...unreached];
+  return order;
 }
 
 export function buildChainEdges(nodes: WorkflowNode[]): WorkflowEdge[] {
@@ -123,7 +123,7 @@ export function createNode(
     kind,
     title: definition.label,
     subtitle: definition.subtitle,
-    params: definition.params.map((param) => ({ ...param })),
+    config: createDefaultStepConfig(kind),
     x,
     y,
   };
@@ -171,7 +171,7 @@ export function getOutputRows(node: WorkflowNode) {
   return [
     { id: "tx-hash", name: "txHash", type: "String" },
     { id: "gas-used", name: "gasUsed", type: "Number" },
-    ...node.params.map((param) => ({
+    ...describeStepConfig(node.config).map((param) => ({
       id: param.id,
       name: toConfigKey(param.label),
       type: "String",
@@ -184,7 +184,66 @@ export function toConfigLines(node: WorkflowNode): string[] {
   return [
     `strategy.${node.kind}({`,
     `  protocol: "${node.subtitle}",`,
-    ...node.params.map((param) => `  ${key(param.label)}: "${param.value}",`),
+    ...describeStepConfig(node.config).map(
+      (param) => `  ${key(param.label)}: "${param.value}",`,
+    ),
     "})",
   ];
+}
+
+export function getPreflight(graph: WorkflowGraph): Preflight {
+  const order = getExecutionOrder(graph);
+  const orderedNodes = order.flatMap((id) => {
+    const node = graph.nodes.find((item) => item.id === id);
+    return node ? [node] : [];
+  });
+
+  const problems: GraphProblem[] = [];
+  const warnings: GraphProblem[] = [];
+
+  if (graph.nodes.length === 0) {
+    problems.push({
+      message: "Add at least one block before creating a workflow.",
+    });
+  }
+
+  if (graph.nodes.length > MAX_STEPS) {
+    problems.push({
+      message: `A workflow stores at most ${MAX_STEPS} steps, this one has ${graph.nodes.length}.`,
+    });
+  }
+
+  if (orderedNodes.length < graph.nodes.length) {
+    problems.push({
+      message: "Some blocks form a loop, so the run order cannot be resolved.",
+    });
+  }
+
+  for (const problem of collectStepProblems(orderedNodes)) {
+    const node = graph.nodes.find((item) => item.id === problem.nodeId);
+    problems.push({
+      nodeId: problem.nodeId,
+      message: `${node?.title ?? "Block"} ${problem.message}.`,
+    });
+  }
+
+  const branching = graph.nodes.filter(
+    (node) => graph.edges.filter((edge) => edge.source === node.id).length > 1,
+  );
+
+  if (branching.length > 0) {
+    warnings.push({
+      message: `A branch runs as one flat list on chain: ${orderedNodes
+        .map((node) => node.title)
+        .join(" then ")}.`,
+    });
+  }
+
+  return {
+    order,
+    orderedNodes,
+    problems,
+    warnings,
+    canEncode: problems.length === 0,
+  };
 }

@@ -1,16 +1,12 @@
-import { ARC_LOGO_SRC, USDC_LOGO_SRC } from "@/constants/assets";
+import { BLOCK_CATALOG, STRATEGY_TEMPLATES } from "@/constants/blocks";
+import { createDefaultStepConfig } from "@/lib/step-config";
 import type { LogoName } from "@/types/logo";
-import type {
-  BlockDefinition,
-  BlockKind,
-  StrategyTemplate,
-  WorkflowEdge,
-  WorkflowNode,
-} from "../types";
+import type { BlockKind, WorkflowEdge, WorkflowNode } from "../types";
+
+export { BLOCK_CATALOG, STRATEGY_TEMPLATES };
 
 export const WORKFLOW_NAME = "USDC Auto-Compound Strategy";
 export const WORKFLOW_TOKENS: LogoName[] = ["usdc"];
-export const WORKFLOW_UPDATED_LABEL = "Updated 24 minutes ago";
 export const BREADCRUMB_TRAIL = ["Workflows", WORKFLOW_NAME];
 
 export const NODE_WIDTH = 300;
@@ -29,148 +25,6 @@ export const SIMULATION_STEP_MS = 700;
 export const NEW_NODE_STAGGER = 28;
 
 export const INITIAL_VIEWPORT = { x: 48, y: 40, zoom: 0.82 };
-
-export const BLOCK_CATALOG: Record<BlockKind, BlockDefinition> = {
-  trigger: {
-    kind: "trigger",
-    label: "Start",
-    group: "Trigger",
-    description: "Kick off the strategy on a schedule or on demand.",
-    icon: "bolt",
-    logoImages: [
-      { src: USDC_LOGO_SRC, alt: "USDC" },
-      { src: ARC_LOGO_SRC, alt: "Arc" },
-    ],
-    subtitle: "Every 24 hours",
-    params: [
-      { id: "schedule", label: "Schedule", value: "Daily 00:00 UTC" },
-      { id: "network", label: "Network", value: "Arc" },
-    ],
-  },
-  approve: {
-    kind: "approve",
-    label: "Approve Token",
-    group: "Setup",
-    description: "Grant a protocol permission to move an asset.",
-    icon: "approve",
-    logo: "ethereum",
-    subtitle: "ERC-20 allowance",
-    params: [
-      { id: "asset", label: "Asset", value: "USDC" },
-      { id: "spender", label: "Spender", value: "Aave V3 Pool" },
-      { id: "amount", label: "Amount", value: "Exact" },
-    ],
-  },
-  deposit: {
-    kind: "deposit",
-    label: "Deposit",
-    group: "Liquidity",
-    description: "Supply an asset into a lending pool or vault.",
-    icon: "deposit",
-    logo: "aave",
-    subtitle: "Aave V3 Pool",
-    params: [
-      { id: "asset", label: "Asset", value: "USDC" },
-      { id: "amount", label: "Amount", value: "5,000" },
-      { id: "chain", label: "Chain", value: "Arc" },
-    ],
-  },
-  swap: {
-    kind: "swap",
-    label: "Swap Token",
-    group: "Trading",
-    description: "Route a trade through the best available pool.",
-    icon: "swap",
-    logo: "uniswap",
-    subtitle: "Uniswap V3",
-    params: [
-      { id: "from", label: "From", value: "USDC" },
-      { id: "to", label: "To", value: "WETH" },
-      { id: "slippage", label: "Slippage", value: "0.5%" },
-    ],
-  },
-  yield: {
-    kind: "yield",
-    label: "Yield Farm",
-    group: "Yield",
-    description: "Stake an LP position and auto-compound rewards.",
-    icon: "yield",
-    logo: "curve",
-    subtitle: "Curve Finance",
-    params: [
-      { id: "pool", label: "Pool", value: "USDC / WETH 0.05%" },
-      { id: "strategy", label: "Strategy", value: "Auto-compound" },
-      { id: "apy", label: "Est. APY", value: "18.4%" },
-    ],
-  },
-  harvest: {
-    kind: "harvest",
-    label: "Harvest Rewards",
-    group: "Yield",
-    description: "Claim accrued incentives once they clear a threshold.",
-    icon: "harvest",
-    logo: "curve",
-    subtitle: "Curve Gauge",
-    params: [
-      { id: "claim", label: "Claim", value: "CRV + CVX" },
-      { id: "min-value", label: "Min value", value: "$25" },
-    ],
-  },
-  bridge: {
-    kind: "bridge",
-    label: "Bridge Asset",
-    group: "Routing",
-    description: "Move an asset across chains before the next step.",
-    icon: "bridge",
-    logo: "chainlink",
-    subtitle: "Chainlink CCIP",
-    params: [
-      { id: "from", label: "From", value: "Ethereum" },
-      { id: "to", label: "To", value: "Arc" },
-      { id: "asset", label: "Asset", value: "USDC" },
-    ],
-  },
-  withdraw: {
-    kind: "withdraw",
-    label: "Withdraw",
-    group: "Liquidity",
-    description: "Pull a position back out of a pool or vault.",
-    icon: "withdraw",
-    logo: "aave",
-    subtitle: "Aave V3 Pool",
-    params: [
-      { id: "asset", label: "Asset", value: "aUSDC" },
-      { id: "amount", label: "Amount", value: "Max" },
-    ],
-  },
-  condition: {
-    kind: "condition",
-    label: "Condition",
-    group: "Logic",
-    description: "Branch the run when a market value crosses a limit.",
-    icon: "condition",
-    logo: "chainlink",
-    subtitle: "Chainlink Data Feed",
-    params: [
-      { id: "watch", label: "Watch", value: "Pool APY" },
-      { id: "if", label: "If", value: "< 8%" },
-      { id: "then", label: "Then", value: "Rebalance" },
-    ],
-  },
-  alert: {
-    kind: "alert",
-    label: "Alert",
-    group: "Monitoring",
-    description: "Notify a channel when a step fails or drifts.",
-    icon: "alert",
-    logo: "telegram",
-    subtitle: "Telegram",
-    params: [
-      { id: "trigger", label: "Trigger", value: "Failure or slippage" },
-      { id: "channel", label: "Channel", value: "@defi-ops" },
-    ],
-  },
-};
 
 export const DOCK_BLOCK_ORDER: BlockKind[] = [
   "trigger",
@@ -201,7 +55,7 @@ export const INITIAL_NODES: WorkflowNode[] = [
     kind: "trigger",
     title: "Start",
     subtitle: "Every 24 hours",
-    params: BLOCK_CATALOG.trigger.params,
+    config: createDefaultStepConfig("trigger"),
     x: 60,
     y: 300,
   },
@@ -210,7 +64,7 @@ export const INITIAL_NODES: WorkflowNode[] = [
     kind: "deposit",
     title: "Deposit",
     subtitle: "Aave V3 Pool",
-    params: BLOCK_CATALOG.deposit.params,
+    config: createDefaultStepConfig("deposit"),
     x: 440,
     y: 300,
   },
@@ -219,7 +73,7 @@ export const INITIAL_NODES: WorkflowNode[] = [
     kind: "swap",
     title: "Swap Token",
     subtitle: "Uniswap V3",
-    params: BLOCK_CATALOG.swap.params,
+    config: createDefaultStepConfig("swap"),
     x: 820,
     y: 300,
   },
@@ -228,7 +82,7 @@ export const INITIAL_NODES: WorkflowNode[] = [
     kind: "yield",
     title: "Yield Farm",
     subtitle: "Curve Finance",
-    params: BLOCK_CATALOG.yield.params,
+    config: createDefaultStepConfig("yield"),
     x: 1200,
     y: 180,
   },
@@ -237,7 +91,7 @@ export const INITIAL_NODES: WorkflowNode[] = [
     kind: "alert",
     title: "Alert",
     subtitle: "Telegram",
-    params: BLOCK_CATALOG.alert.params,
+    config: createDefaultStepConfig("alert"),
     x: 1200,
     y: 420,
   },
@@ -248,65 +102,6 @@ export const INITIAL_EDGES: WorkflowEdge[] = [
   { id: "edge-node-2-node-3", source: "node-2", target: "node-3", label: "2" },
   { id: "edge-node-3-node-4", source: "node-3", target: "node-4", label: "3" },
   { id: "edge-node-3-node-5", source: "node-3", target: "node-5", label: "3" },
-];
-
-export const STRATEGY_TEMPLATES: StrategyTemplate[] = [
-  {
-    id: "stable-auto-compound",
-    name: "Stablecoin auto-compound",
-    description: "Supply USDC, farm the pair and reinvest rewards daily.",
-    tokens: ["usdc"],
-    kinds: ["approve", "deposit", "yield", "harvest"],
-  },
-  {
-    id: "weekly-dca",
-    name: "Weekly ETH accumulation",
-    description: "Swap a fixed amount into ETH every week and report it.",
-    tokens: ["usdc", "ethereum"],
-    kinds: ["trigger", "swap", "alert"],
-  },
-  {
-    id: "cross-chain-yield",
-    name: "Cross-chain yield hop",
-    description: "Bridge idle stables to Arc, then park them in a vault.",
-    tokens: ["usdc"],
-    kinds: ["bridge", "approve", "deposit", "yield"],
-  },
-  {
-    id: "guarded-exit",
-    name: "Guarded farm exit",
-    description: "Watch pool APY and unwind the position when it drops.",
-    tokens: ["usdc", "ethereum"],
-    kinds: ["condition", "harvest", "withdraw", "alert"],
-  },
-  {
-    id: "idle-cash-sweep",
-    name: "Idle cash sweep",
-    description: "Sweep leftover USDC into the lending pool every night.",
-    tokens: ["usdc"],
-    kinds: ["trigger", "approve", "deposit"],
-  },
-  {
-    id: "reward-compounding-loop",
-    name: "Reward compounding loop",
-    description: "Claim rewards, swap them back to the pair and restake.",
-    tokens: ["usdc", "ethereum"],
-    kinds: ["harvest", "swap", "deposit", "yield"],
-  },
-  {
-    id: "risk-off-unwind",
-    name: "Risk-off unwind",
-    description: "Exit the farm, bridge home and report when a guard trips.",
-    tokens: ["usdc"],
-    kinds: ["condition", "withdraw", "bridge", "alert"],
-  },
-  {
-    id: "lp-bootstrap",
-    name: "LP bootstrap",
-    description: "Split a stable balance into a pair and stake the position.",
-    tokens: ["usdc", "ethereum"],
-    kinds: ["approve", "swap", "yield"],
-  },
 ];
 
 export const PROMPT_RULES: { keywords: string[]; kind: BlockKind }[] = [
