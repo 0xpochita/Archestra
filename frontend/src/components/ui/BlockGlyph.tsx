@@ -1,8 +1,8 @@
 import Image from "next/image";
-import { Icon } from "@/components/ui/Icon";
-import { Logo } from "@/components/ui/Logo";
-import { BLOCK_CATALOG } from "../constants";
-import type { BlockKind } from "../types";
+import { BLOCK_CATALOG } from "@/constants/blocks";
+import type { BlockKind } from "@/types/block";
+import { Icon } from "./Icon";
+import { Logo } from "./Logo";
 
 interface BlockGlyphProps {
   kind: BlockKind;

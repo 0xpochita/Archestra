@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import {
-  BLOCK_CATALOG,
-  BlockGlyph,
-  type StrategyTemplate,
-} from "@/components/(pages)/(main)";
+import { BlockGlyph } from "@/components/ui/BlockGlyph";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { STUDIO_PATH } from "@/constants/assets";
+import { BLOCK_CATALOG } from "@/constants/blocks";
+import type { StrategyTemplate } from "@/types/block";
 
 interface TemplateCardProps {
   template: StrategyTemplate;

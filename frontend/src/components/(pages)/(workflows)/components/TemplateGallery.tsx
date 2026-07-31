@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useId, useState } from "react";
-import { STRATEGY_TEMPLATES } from "@/components/(pages)/(main)";
 import { Icon } from "@/components/ui/Icon";
 import { STUDIO_PATH } from "@/constants/assets";
+import { STRATEGY_TEMPLATES } from "@/constants/blocks";
 import {
   BLANK_TEMPLATE_BODY,
   BLANK_TEMPLATE_TITLE,
