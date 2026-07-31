@@ -31,4 +31,7 @@ export type IconName =
   | "addBlocks"
   | "check"
   | "loader"
-  | "search";
+  | "search"
+  | "wallet"
+  | "vault"
+  | "external";
