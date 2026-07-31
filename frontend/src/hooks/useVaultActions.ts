@@ -15,7 +15,7 @@ export function useVaultActions(
 
   const mint = (tokenId: TokenId, amount: bigint) => {
     if (!ownerAddress) return Promise.reject(new Error("Connect a wallet."));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: demoTokenAbi,
       address: TOKENS[tokenId].address,
       functionName: "mint",
@@ -25,7 +25,7 @@ export function useVaultActions(
 
   const fundVault = (tokenId: TokenId, amount: bigint) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: demoTokenAbi,
       address: TOKENS[tokenId].address,
       functionName: "transfer",
@@ -35,7 +35,7 @@ export function useVaultActions(
 
   const acceptExecutor = (executor: Address) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: strategyVaultAbi,
       address: vaultAddress,
       functionName: "acceptExecutor",
@@ -46,7 +46,7 @@ export function useVaultActions(
   const withdraw = (tokenId: TokenId, amount: bigint) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
     if (!ownerAddress) return Promise.reject(new Error("Connect a wallet."));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: strategyVaultAbi,
       address: vaultAddress,
       functionName: "withdraw",

@@ -1,7 +1,7 @@
 "use client";
 
 import { type Address, zeroAddress } from "viem";
-import { useConnection, useReadContract, useReadContracts } from "wagmi";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import {
   ARC_CHAIN_ID,
   REGISTRY_ADDRESS,
@@ -126,7 +126,7 @@ function readAmount(result: unknown) {
 }
 
 export function useVault() {
-  const { address, chainId, isConnected, isConnecting } = useConnection();
+  const { address, chainId, isConnected, isConnecting } = useAccount();
   const isWrongNetwork = isConnected && chainId !== ARC_CHAIN_ID;
   const isEnabled = isConnected && !isWrongNetwork && Boolean(address);
 

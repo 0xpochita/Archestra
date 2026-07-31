@@ -1,5 +1,8 @@
 "use client";
 
+import "@rainbow-me/rainbowkit/styles.css";
+
+import { lightTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -20,6 +23,14 @@ const wagmiConfig = createConfig({
 
 const STALE_TIME_MS = 15_000;
 
+const monochromeTheme = lightTheme({
+  accentColor: "#0a0a0a",
+  accentColorForeground: "#ffffff",
+  borderRadius: "none",
+  fontStack: "system",
+  overlayBlur: "small",
+});
+
 export function ChainProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -30,7 +41,11 @@ export function ChainProvider({ children }: { children: ReactNode }) {
 
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider theme={monochromeTheme} modalSize="compact">
+          {children}
+        </RainbowKitProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }

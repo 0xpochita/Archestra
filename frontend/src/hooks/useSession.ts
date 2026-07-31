@@ -89,7 +89,7 @@ export function useSessions(
     expiresAt: number,
   ) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: strategyVaultAbi,
       address: vaultAddress,
       functionName: "setSession",
@@ -99,7 +99,7 @@ export function useSessions(
 
   const revokeSession = (tokenId: TokenId) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.mutateAsync({
+    return write.writeContractAsync({
       abi: strategyVaultAbi,
       address: vaultAddress,
       functionName: "revokeSession",
