@@ -1,14 +1,16 @@
 "use client";
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { AppBar } from "@/components/ui/AppBar";
 import { Icon } from "@/components/ui/Icon";
 import { popoverVariants } from "@/components/ui/motion";
 import { WalletButton } from "@/components/ui/WalletButton";
 import { WORKFLOWS_PATH } from "@/constants/assets";
 import type { RunOutcome } from "@/lib/chain/decode-run";
+import type { RunRecord } from "@/lib/schemas/strategy";
 import { getStrategyTokens } from "@/lib/step-config";
+import { useStrategyStore } from "@/stores/strategy-store";
 import { BREADCRUMB_TRAIL } from "../constants";
 import { useWorkflowStudio } from "../hooks/useWorkflowStudio";
 import { AiWorkflowModal } from "./AiWorkflowModal";
@@ -16,13 +18,18 @@ import { BlockDock } from "./BlockDock";
 import { BlockLibraryModal } from "./BlockLibraryModal";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { ExecutorBanner } from "./ExecutorBanner";
+import { GuidedSetupModal } from "./GuidedSetupModal";
 import { InspectorPanel } from "./InspectorPanel";
+import { NameStrategyModal } from "./NameStrategyModal";
 import { OnChainStatus } from "./OnChainStatus";
 import { PreflightNotice } from "./PreflightNotice";
+import { RunHistoryModal } from "./RunHistoryModal";
 import { RunReceiptPanel } from "./RunReceiptPanel";
+import { SaveWorkflowButton } from "./SaveWorkflowButton";
 import { Sidebar } from "./Sidebar";
 import { SimulationModal } from "./SimulationModal";
 import { StrategyTemplateModal } from "./StrategyTemplateModal";
+import { StudioSession } from "./StudioSession";
 import { VaultPanel } from "./VaultPanel";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { WorkflowTitle } from "./WorkflowTitle";
@@ -32,21 +39,70 @@ export function WorkflowStudio() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isActivateOpen, setIsActivateOpen] = useState(false);
   const [receipt, setReceipt] = useState<RunOutcome | null>(null);
+  const [isNamingOpen, setIsNamingOpen] = useState(false);
+  const [isGuidedOpen, setIsGuidedOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const strategies = useStrategyStore((state) => state.strategies);
+  const activeStrategyId = useStrategyStore((state) => state.activeStrategyId);
+  const runs = useStrategyStore((state) => state.runs);
   const strategyTokens = getStrategyTokens(
     studio.preflight.orderedNodes.map((node) => node.config),
   );
+
+  const startBlankWorkflow = studio.startBlankWorkflow;
+  const handleStartBlank = useCallback(() => {
+    startBlankWorkflow();
+    setIsNamingOpen(true);
+  }, [startBlankWorkflow]);
 
   const playRun = studio.playRun;
   const handleRunOutcome = useCallback(
     (outcome: RunOutcome, nodeIds: string[]) => {
       setReceipt(outcome);
       playRun(nodeIds);
+
+      const store = useStrategyStore.getState();
+      const strategy = store.strategies.find(
+        (item) => item.id === store.activeStrategyId,
+      );
+      if (!strategy) return;
+
+      const record: RunRecord = {
+        runId: outcome.runId,
+        strategyId: strategy.id,
+        strategyName: strategy.name,
+        onchainId: strategy.onchainId,
+        status: outcome.stopped ? "stopped" : "succeeded",
+        stepsExecuted: outcome.stepsExecuted,
+        gasUsed: outcome.gasUsed.toString(),
+        txHash: outcome.txHash,
+        finishedAt: Date.now(),
+        steps: outcome.steps.map((step) => ({
+          position: step.position,
+          kind: step.kind,
+          tokenOut: step.tokenOut,
+          amountOut: step.amountOut.toString(),
+        })),
+      };
+
+      store.recordRun(record);
     },
     [playRun],
   );
 
   return (
     <MotionConfig reducedMotion="user">
+      <Suspense fallback={null}>
+        <StudioSession
+          graph={studio.graph}
+          workflowName={studio.workflowName}
+          workflowTokens={studio.workflowTokens}
+          onApplyTemplate={studio.loadStrategy}
+          onStartBlank={handleStartBlank}
+          onRestore={studio.restoreGraph}
+        />
+      </Suspense>
+
       <AppBar
         trail={BREADCRUMB_TRAIL}
         brandHref={WORKFLOWS_PATH}
@@ -72,20 +128,57 @@ export function WorkflowStudio() {
             <WorkflowTitle
               name={studio.workflowName}
               tokens={studio.workflowTokens}
+              savedStrategies={strategies}
+              activeStrategyId={activeStrategyId}
               onNameChange={studio.setWorkflowName}
               onSelectStrategy={studio.loadStrategy}
+              onOpenSaved={(id) => {
+                const store = useStrategyStore.getState();
+                const strategy = store.strategies.find(
+                  (item) => item.id === id,
+                );
+                if (!strategy) return;
+                store.openStrategy(id);
+                studio.restoreGraph(
+                  strategy.graph,
+                  strategy.name,
+                  studio.workflowTokens,
+                );
+              }}
             />
 
             <div className="ml-auto flex items-center gap-4">
-              <OnChainStatus
-                orderedNodes={studio.preflight.orderedNodes}
-                canEncode={studio.preflight.canEncode}
-                tokenIds={strategyTokens}
-                onRequestActivate={() => setIsActivateOpen(true)}
-                onRunOutcome={handleRunOutcome}
-                onMockRun={studio.runWorkflow}
-                isMockRunning={studio.isRunning}
+              <SaveWorkflowButton
+                graph={studio.graph}
+                workflowName={studio.workflowName}
+                workflowTokens={studio.workflowTokens}
               />
+
+              <button
+                type="button"
+                onClick={() => setIsHistoryOpen(true)}
+                className="hidden items-center gap-2 border border-line px-3 py-2 text-sm text-ink transition-colors hover:bg-surface-hover lg:flex"
+              >
+                <Icon name="clock" className="size-4" />
+                Runs
+                {runs.length > 0 ? (
+                  <span className="border border-line px-1.5 text-[11px] text-ink-muted">
+                    {runs.length}
+                  </span>
+                ) : null}
+              </button>
+
+              <Suspense fallback={null}>
+                <OnChainStatus
+                  orderedNodes={studio.preflight.orderedNodes}
+                  canEncode={studio.preflight.canEncode}
+                  tokenIds={strategyTokens}
+                  onRequestActivate={() => setIsActivateOpen(true)}
+                  onRunOutcome={handleRunOutcome}
+                  onMockRun={studio.runWorkflow}
+                  isMockRunning={studio.isRunning}
+                />
+              </Suspense>
               <button
                 type="button"
                 onClick={studio.openSimulation}
@@ -98,16 +191,6 @@ export function WorkflowStudio() {
           </div>
 
           <ExecutorBanner />
-
-          <AnimatePresence>
-            {receipt ? (
-              <RunReceiptPanel
-                key="run-receipt"
-                outcome={receipt}
-                onClose={() => setReceipt(null)}
-              />
-            ) : null}
-          </AnimatePresence>
 
           <PreflightNotice
             problems={studio.preflight.problems}
@@ -133,6 +216,8 @@ export function WorkflowStudio() {
                 onMoveStart={studio.beginHistoryEntry}
                 onMoveNode={studio.moveNode}
                 onAddNext={studio.startBlockAfter}
+                onAddFirstBlock={studio.toggleBlockLibrary}
+                onGuidedSetup={() => setIsGuidedOpen(true)}
               />
 
               <div className="absolute bottom-6 left-6">
@@ -206,6 +291,52 @@ export function WorkflowStudio() {
               onAccept={studio.acceptDraft}
               onClear={studio.clearAssistant}
               onClose={studio.closeAssistant}
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isHistoryOpen ? (
+            <RunHistoryModal
+              key="run-history"
+              runs={runs}
+              onClose={() => setIsHistoryOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {receipt ? (
+            <RunReceiptPanel
+              key="run-receipt"
+              outcome={receipt}
+              onClose={() => setReceipt(null)}
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isGuidedOpen ? (
+            <GuidedSetupModal
+              key="guided-setup"
+              orderedNodes={studio.preflight.orderedNodes}
+              canEncode={studio.preflight.canEncode}
+              tokenIds={strategyTokens}
+              onRunOutcome={handleRunOutcome}
+              onClose={() => setIsGuidedOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isNamingOpen ? (
+            <NameStrategyModal
+              key="name-strategy"
+              onConfirm={(name) => {
+                studio.setWorkflowName(name);
+                setIsNamingOpen(false);
+              }}
+              onSkip={() => setIsNamingOpen(false)}
             />
           ) : null}
         </AnimatePresence>

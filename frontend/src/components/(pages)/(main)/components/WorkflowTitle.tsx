@@ -6,6 +6,7 @@ import { BlockGlyph } from "@/components/ui/BlockGlyph";
 import { Icon } from "@/components/ui/Icon";
 import { Logo } from "@/components/ui/Logo";
 import { itemVariants, popoverVariants } from "@/components/ui/motion";
+import type { SavedStrategy } from "@/lib/schemas/strategy";
 import type { LogoName } from "@/types/logo";
 import { STRATEGY_TEMPLATES } from "../constants";
 import type { StrategyTemplate } from "../types";
@@ -15,15 +16,21 @@ const MIN_NAME_SIZE = 10;
 interface WorkflowTitleProps {
   name: string;
   tokens: LogoName[];
+  savedStrategies: SavedStrategy[];
+  activeStrategyId: string | null;
   onNameChange: (name: string) => void;
   onSelectStrategy: (template: StrategyTemplate) => void;
+  onOpenSaved: (id: string) => void;
 }
 
 export function WorkflowTitle({
   name,
   tokens,
+  savedStrategies,
+  activeStrategyId,
   onNameChange,
   onSelectStrategy,
+  onOpenSaved,
 }: WorkflowTitleProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -104,6 +111,58 @@ export function WorkflowTitle({
             exit="exit"
             className="scroll-slim absolute top-12 left-0 z-40 max-h-[60vh] w-[380px] overflow-y-auto border border-line bg-surface shadow-xl"
           >
+            {savedStrategies.length > 0 ? (
+              <li className="border-b border-line bg-surface-raised px-4 py-2 text-[10px] font-semibold tracking-[0.16em] text-ink-subtle uppercase">
+                Your strategies
+              </li>
+            ) : null}
+
+            {savedStrategies.map((strategy) => (
+              <motion.li
+                key={strategy.id}
+                variants={itemVariants}
+                className="border-b border-line last:border-b-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenSaved(strategy.id);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-hover"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-ink">
+                      {strategy.name}
+                    </span>
+                    <span className="block truncate text-xs text-ink-subtle">
+                      {strategy.graph.nodes.length} blocks
+                      {strategy.onchainId
+                        ? `, workflow #${strategy.onchainId}`
+                        : ", not on chain yet"}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 gap-1">
+                    {strategy.graph.nodes.slice(0, 4).map((node) => (
+                      <span
+                        key={node.id}
+                        className="grid size-6 place-items-center border border-line bg-surface text-ink"
+                      >
+                        <BlockGlyph kind={node.kind} className="size-4" />
+                      </span>
+                    ))}
+                  </span>
+                  {strategy.id === activeStrategyId ? (
+                    <Icon name="check" className="size-4 shrink-0 text-ink" />
+                  ) : null}
+                </button>
+              </motion.li>
+            ))}
+
+            <li className="border-b border-line bg-surface-raised px-4 py-2 text-[10px] font-semibold tracking-[0.16em] text-ink-subtle uppercase">
+              Templates
+            </li>
+
             {STRATEGY_TEMPLATES.map((template) => (
               <motion.li
                 key={template.id}

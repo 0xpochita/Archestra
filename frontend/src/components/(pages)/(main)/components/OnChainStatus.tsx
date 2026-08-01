@@ -10,6 +10,7 @@ import { useWorkflowRun } from "@/hooks/useWorkflowRun";
 import type { RunOutcome } from "@/lib/chain/decode-run";
 import { getRunStage, getRunStageLabel } from "@/lib/chain/run-stage";
 import type { TokenId } from "@/lib/chain/tokens";
+import { useStrategyStore } from "@/stores/strategy-store";
 import type { WorkflowNode } from "../types";
 
 interface OnChainStatusProps {
@@ -44,8 +45,17 @@ export function OnChainStatus({
     vault.isVaultDeployed,
   );
 
-  const { outcome } = run;
+  const { outcome, workflowId } = run;
   const lastRunIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (workflowId === null) return;
+
+    const store = useStrategyStore.getState();
+    if (!store.activeStrategyId) return;
+
+    store.setOnchainId(store.activeStrategyId, workflowId.toString());
+  }, [workflowId]);
 
   useEffect(() => {
     if (!outcome || lastRunIdRef.current === outcome.runId) return;
@@ -159,9 +169,15 @@ export function OnChainStatus({
   return (
     <span className="flex items-center gap-3">
       {run.workflowId !== null ? (
-        <span className="hidden items-center gap-2 text-xs text-ink-muted lg:flex">
+        <span
+          title="The steps stored on chain are immutable. Editing blocks changes the canvas only, so a changed strategy needs a new workflow."
+          className="hidden items-center gap-2 text-xs text-ink-muted lg:flex"
+        >
           <Icon name="check" className="size-3.5 text-ink" />
           Workflow #{run.workflowId.toString()}
+          <span className="border border-line px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
+            immutable
+          </span>
           <AddressLink address={REGISTRY_ADDRESS} label="registry" />
         </span>
       ) : null}
