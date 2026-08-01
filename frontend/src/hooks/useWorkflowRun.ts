@@ -107,6 +107,14 @@ export function useWorkflowRun(acceptedExecutor?: `0x${string}`) {
     });
   };
 
+  const runError = run.error;
+  const resetRun = run.reset;
+  const isSimulationReady = simulation.isSuccess;
+
+  useEffect(() => {
+    if (isSimulationReady && runError) resetRun();
+  }, [isSimulationReady, runError, resetRun]);
+
   const isRunFailed =
     runReceipt.data !== undefined && runReceipt.data.status === "reverted";
 

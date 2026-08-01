@@ -1,7 +1,10 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import type { Address } from "viem";
-import { useReadContracts, useWriteContract } from "wagmi";
+import { useConfig, useReadContracts, useWriteContract } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { strategyVaultAbi } from "@/lib/chain/generated";
 import { TOKENS, type Token, type TokenId } from "@/lib/chain/tokens";
 
@@ -81,6 +84,20 @@ export function useSessions(
   );
 
   const write = useWriteContract();
+  const config = useConfig();
+  const queryClient = useQueryClient();
+  const [isSettling, setIsSettling] = useState(false);
+
+  const settle = async (hash: `0x${string}`) => {
+    setIsSettling(true);
+    try {
+      await waitForTransactionReceipt(config, { hash });
+      await queryClient.invalidateQueries();
+    } finally {
+      setIsSettling(false);
+    }
+    return hash;
+  };
 
   const setSession = (
     tokenId: TokenId,
@@ -89,29 +106,38 @@ export function useSessions(
     expiresAt: number,
   ) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.writeContractAsync({
-      abi: strategyVaultAbi,
-      address: vaultAddress,
-      functionName: "setSession",
-      args: [TOKENS[tokenId].address, maxPerRun, maxPerDay, BigInt(expiresAt)],
-    });
+    return write
+      .writeContractAsync({
+        abi: strategyVaultAbi,
+        address: vaultAddress,
+        functionName: "setSession",
+        args: [
+          TOKENS[tokenId].address,
+          maxPerRun,
+          maxPerDay,
+          BigInt(expiresAt),
+        ],
+      })
+      .then(settle);
   };
 
   const revokeSession = (tokenId: TokenId) => {
     if (!vaultAddress) return Promise.reject(new Error(MISSING_VAULT));
-    return write.writeContractAsync({
-      abi: strategyVaultAbi,
-      address: vaultAddress,
-      functionName: "revokeSession",
-      args: [TOKENS[tokenId].address],
-    });
+    return write
+      .writeContractAsync({
+        abi: strategyVaultAbi,
+        address: vaultAddress,
+        functionName: "revokeSession",
+        args: [TOKENS[tokenId].address],
+      })
+      .then(settle);
   };
 
   return {
     sessions,
     isLoading: reads.isLoading,
     error: reads.error,
-    isWriting: write.isPending,
+    isWriting: write.isPending || isSettling,
     setSession,
     revokeSession,
     refetch: () => {
