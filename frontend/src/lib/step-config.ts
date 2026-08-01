@@ -6,7 +6,7 @@ import {
   type StepConfig,
 } from "@/lib/schemas/step-config";
 import type { BlockKind, BlockParam } from "@/types/block";
-import { formatDuration, truncateAddress } from "./format";
+import { formatDuration, parseTokenAmount, truncateAddress } from "./format";
 
 const DAY_IN_SECONDS = 86_400;
 const DEFAULT_DEADLINE_DAYS = 30;
@@ -187,4 +187,60 @@ export function getStrategyTokens(configs: StepConfig[]): TokenId[] {
   }
 
   return [...spent];
+}
+
+export interface TokenRequirement {
+  exact: bigint;
+  usesWholeBalance: boolean;
+}
+
+const addExact = (
+  requirements: Map<TokenId, TokenRequirement>,
+  tokenId: TokenId,
+  amount: AmountInput,
+) => {
+  const current = requirements.get(tokenId) ?? {
+    exact: 0n,
+    usesWholeBalance: false,
+  };
+
+  if (amount.mode === "max") {
+    requirements.set(tokenId, { ...current, usesWholeBalance: true });
+    return;
+  }
+
+  const parsed = parseTokenAmount(amount.value, TOKENS[tokenId].decimals);
+  requirements.set(tokenId, {
+    ...current,
+    exact: current.exact + (parsed ?? 0n),
+  });
+};
+
+export function getRequiredAmounts(
+  configs: StepConfig[],
+): Map<TokenId, TokenRequirement> {
+  const requirements = new Map<TokenId, TokenRequirement>();
+
+  for (const config of configs) {
+    switch (config.kind) {
+      case "approve":
+      case "bridge":
+        addExact(requirements, config.token, config.amount);
+        break;
+      case "deposit":
+      case "withdraw":
+        addExact(requirements, config.asset, config.amount);
+        break;
+      case "swap":
+        addExact(requirements, config.tokenIn, config.amountIn);
+        break;
+      case "yield":
+        addExact(requirements, "usdc", config.amount);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return requirements;
 }
