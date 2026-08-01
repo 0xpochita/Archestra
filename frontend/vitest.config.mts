@@ -6,6 +6,8 @@ export default defineConfig({
     alias: { "@": resolve(import.meta.dirname, "src") },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    environment: "jsdom",
+    globals: true,
   },
 });
