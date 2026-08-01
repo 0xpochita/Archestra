@@ -1,11 +1,11 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { StepConfig } from "@/lib/schemas/step-config";
 import type { LogoName } from "@/types/logo";
 import {
   AI_RESPONSE_DELAY_MS,
+  BLANK_WORKFLOW_NAME,
   FIT_PADDING,
   HISTORY_LIMIT,
   INITIAL_EDGES,
@@ -16,7 +16,6 @@ import {
   NODE_WIDTH,
   RUN_STEP_DURATION_MS,
   SIMULATION_STEP_MS,
-  STRATEGY_TEMPLATES,
   WORKFLOW_NAME,
   WORKFLOW_TOKENS,
   ZOOM_MAX,
@@ -56,6 +55,11 @@ const INITIAL_HISTORY: HistoryState = {
   future: [],
 };
 
+interface RunPlan {
+  id: number;
+  nodeIds: string[];
+}
+
 interface SimulationState {
   stepIds: string[];
   completed: number;
@@ -66,12 +70,8 @@ const CHAIN_SPACING = 380;
 export function useWorkflowStudio() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const sequenceRef = useRef(INITIAL_NODES.length);
-  const runOrderRef = useRef<string[]>([]);
+  const runSequenceRef = useRef(0);
   const thinkingTimerRef = useRef<number | null>(null);
-  const appliedTemplateRef = useRef(false);
-  const loadStrategyRef = useRef<(template: StrategyTemplate) => void>(
-    () => {},
-  );
 
   const [history, setHistory] = useState<HistoryState>(INITIAL_HISTORY);
   const [viewport, setViewport] = useState<Viewport>(INITIAL_VIEWPORT);
@@ -80,7 +80,7 @@ export function useWorkflowStudio() {
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
+  const [runPlan, setRunPlan] = useState<RunPlan | null>(null);
   const [runState, setRunState] = useState<Record<string, NodeRunState>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
@@ -90,6 +90,7 @@ export function useWorkflowStudio() {
   const [workflowTokens, setWorkflowTokens] =
     useState<LogoName[]>(WORKFLOW_TOKENS);
 
+  const isRunning = runPlan !== null;
   const graph = history.present;
   const preflight = getPreflight(graph);
   const selectedNode =
@@ -205,6 +206,30 @@ export function useWorkflowStudio() {
     setSelectedNodeId(null);
   };
 
+  const restoreGraph = (
+    restored: WorkflowGraph,
+    name: string,
+    tokens: LogoName[],
+  ) => {
+    const highestId = restored.nodes.reduce((highest, node) => {
+      const suffix = Number(node.id.split("-").at(-1));
+      return Number.isFinite(suffix) ? Math.max(highest, suffix) : highest;
+    }, 0);
+
+    sequenceRef.current = Math.max(sequenceRef.current, highestId);
+    setHistory({ past: [], present: restored, future: [] });
+    setWorkflowName(name);
+    setWorkflowTokens(tokens);
+    setSelectedNodeId(null);
+  };
+
+  const startBlankWorkflow = () => {
+    commit(() => ({ nodes: [], edges: [] }));
+    setWorkflowName(BLANK_WORKFLOW_NAME);
+    setWorkflowTokens([]);
+    setSelectedNodeId(null);
+  };
+
   const moveNode = (id: string, deltaX: number, deltaY: number) =>
     updateGraph((current) => ({
       ...current,
@@ -304,13 +329,13 @@ export function useWorkflowStudio() {
 
   const playRun = (nodeIds: string[]) => {
     if (nodeIds.length === 0) return;
-    runOrderRef.current = nodeIds;
-    setRunState({});
-    setIsRunning(true);
+    runSequenceRef.current += 1;
+    setRunState({ [nodeIds[0]]: "running" });
+    setRunPlan({ id: runSequenceRef.current, nodeIds });
   };
 
   const runWorkflow = () => {
-    if (isRunning || graph.nodes.length === 0) return;
+    if (graph.nodes.length === 0) return;
     playRun(getExecutionOrder(graph));
   };
 
@@ -354,40 +379,32 @@ export function useWorkflowStudio() {
   };
 
   useEffect(() => {
-    if (!isRunning) return;
-    const order = runOrderRef.current;
-    let step = 0;
+    if (!runPlan) return;
+
+    const { nodeIds } = runPlan;
+    let position = 0;
+
     const timer = window.setInterval(() => {
+      position += 1;
+
       setRunState((state) => {
-        const next = { ...state };
-        const previousId = order[step - 1];
-        const currentId = order[step];
-        if (previousId) next[previousId] = "success";
-        if (currentId) next[currentId] = "running";
+        const next = { ...state, [nodeIds[position - 1]]: "success" } as Record<
+          string,
+          NodeRunState
+        >;
+        const upcoming = nodeIds[position];
+        if (upcoming) next[upcoming] = "running";
         return next;
       });
-      step += 1;
-      if (step > order.length) {
+
+      if (position >= nodeIds.length) {
         window.clearInterval(timer);
-        setIsRunning(false);
+        setRunPlan(null);
       }
     }, RUN_STEP_DURATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [isRunning]);
-
-  const requestedTemplateId = useSearchParams().get("template");
-  loadStrategyRef.current = loadStrategy;
-
-  useEffect(() => {
-    if (!requestedTemplateId || appliedTemplateRef.current) return;
-    const template = STRATEGY_TEMPLATES.find(
-      (item) => item.id === requestedTemplateId,
-    );
-    if (!template) return;
-    appliedTemplateRef.current = true;
-    loadStrategyRef.current(template);
-  }, [requestedTemplateId]);
+  }, [runPlan]);
 
   const openSimulation = () => {
     if (graph.nodes.length === 0) return;
@@ -459,11 +476,13 @@ export function useWorkflowStudio() {
     panBy,
     redo,
     removeNode,
+    restoreGraph,
     playRun,
     runWorkflow,
     selectNode: setSelectedNodeId,
     sendPrompt,
     setWorkflowName,
+    startBlankWorkflow,
     startBlockAfter: (id: string) => {
       setSelectedNodeId(id);
       setIsTemplateMenuOpen(false);
