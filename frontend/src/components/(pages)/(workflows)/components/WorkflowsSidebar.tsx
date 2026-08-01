@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   SIDEBAR_ACTIVE_CLASS,
   SIDEBAR_IDLE_CLASS,
@@ -9,7 +10,6 @@ import {
   SidebarShell,
   SidebarText,
 } from "@/components/ui/SidebarShell";
-import { WORKFLOWS_PATH } from "@/constants/assets";
 import { RAIL_LINKS, SIDEBAR_LABEL } from "../constants";
 
 interface WorkflowsSidebarProps {
@@ -17,13 +17,15 @@ interface WorkflowsSidebarProps {
 }
 
 export function WorkflowsSidebar({ isOpen }: WorkflowsSidebarProps) {
+  const pathname = usePathname();
+
   return (
     <SidebarShell label={SIDEBAR_LABEL} isOpen={isOpen}>
       <SidebarSection isOpen={isOpen}>{SIDEBAR_LABEL}</SidebarSection>
 
       {RAIL_LINKS.map((link) => {
         const SidebarIcon = link.icon;
-        const isActive = link.href === WORKFLOWS_PATH;
+        const isActive = link.href === pathname;
 
         return (
           <Link
