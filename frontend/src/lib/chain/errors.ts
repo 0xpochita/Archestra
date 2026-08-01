@@ -1,7 +1,19 @@
-import { BaseError, ContractFunctionRevertedError } from "viem";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  decodeErrorResult,
+} from "viem";
+import {
+  demoTokenAbi,
+  executorAbi,
+  strategyVaultAbi,
+  vaultFactoryAbi,
+  workflowRegistryAbi,
+} from "./generated";
 
 export type ChainErrorAction =
   | "open_session"
+  | "fund_vault"
   | "raise_cap"
   | "accept_executor"
   | "check_wallet"
@@ -150,6 +162,20 @@ const TEMPLATES: Record<string, ErrorTemplate> = {
       `Adapter left ${plain(args[1])} of ${plain(args[0])} behind. This is a contract bug and the run was rolled back.`,
     action: "report",
   },
+  ERC20InsufficientBalance: {
+    code: "insufficient_balance",
+    title: "Token balance is too low",
+    detail: (args) =>
+      `The step needs ${plain(args[2])} and the holder has ${plain(args[1])}, in the token's smallest unit. Nothing moved.`,
+    action: "fund_vault",
+  },
+  ERC20InsufficientAllowance: {
+    code: "insufficient_allowance",
+    title: "Allowance is too low",
+    detail: (args) =>
+      `The adapter may spend ${plain(args[1])} and the step needs ${plain(args[2])}.`,
+    action: "open_session",
+  },
   ZeroAddress: {
     code: "invalid_graph",
     title: "A required address is empty",
@@ -157,6 +183,39 @@ const TEMPLATES: Record<string, ErrorTemplate> = {
     action: "fix_graph",
   },
 };
+
+const KNOWN_ERROR_ABI = [
+  ...executorAbi,
+  ...strategyVaultAbi,
+  ...workflowRegistryAbi,
+  ...vaultFactoryAbi,
+  ...demoTokenAbi,
+].filter((item) => item.type === "error");
+
+interface DecodedRevert {
+  name: string;
+  args: readonly unknown[];
+}
+
+function decodeRevert(
+  reverted: ContractFunctionRevertedError,
+): DecodedRevert | null {
+  if (reverted.data?.errorName) {
+    return { name: reverted.data.errorName, args: reverted.data.args ?? [] };
+  }
+
+  if (!reverted.raw) return null;
+
+  try {
+    const decoded = decodeErrorResult({
+      abi: KNOWN_ERROR_ABI,
+      data: reverted.raw,
+    });
+    return { name: decoded.errorName, args: decoded.args ?? [] };
+  } catch {
+    return null;
+  }
+}
 
 const hasName = (value: unknown): value is { name: string } =>
   typeof value === "object" && value !== null && "name" in value;
@@ -179,14 +238,14 @@ export function toChainError(error: unknown): ChainError | null {
     );
 
     if (reverted instanceof ContractFunctionRevertedError) {
-      const name = reverted.data?.errorName;
-      const template = name ? TEMPLATES[name] : undefined;
+      const decoded = decodeRevert(reverted);
+      const template = decoded ? TEMPLATES[decoded.name] : undefined;
 
-      if (template) {
+      if (template && decoded) {
         return {
           code: template.code,
           title: template.title,
-          detail: template.detail(reverted.data?.args ?? []),
+          detail: template.detail(decoded.args),
           action: template.action,
         };
       }
@@ -194,7 +253,7 @@ export function toChainError(error: unknown): ChainError | null {
       return {
         code: "unknown_revert",
         title: "The contract refused the transaction",
-        detail: `Unrecognised error ${name ?? reverted.signature ?? "without a selector"}.`,
+        detail: `Unrecognised error ${decoded?.name ?? reverted.signature ?? "without a selector"}.`,
         action: "report",
       };
     }

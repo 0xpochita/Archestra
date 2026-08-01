@@ -1,11 +1,12 @@
 import {
   BaseError,
   ContractFunctionRevertedError,
+  encodeErrorResult,
   UserRejectedRequestError,
 } from "viem";
 import { describe, expect, it } from "vitest";
 import { isUserRejection, toChainError } from "./errors";
-import { strategyVaultAbi } from "./generated";
+import { demoTokenAbi, executorAbi, strategyVaultAbi } from "./generated";
 
 function revertedWith(errorName: string, args: unknown[]) {
   const cause = new ContractFunctionRevertedError({
@@ -15,6 +16,56 @@ function revertedWith(errorName: string, args: unknown[]) {
   Object.assign(cause, { data: { errorName, args } });
   return new BaseError("reverted", { cause });
 }
+
+function bubbledThroughExecutor(data: `0x${string}`) {
+  return new BaseError("reverted", {
+    cause: new ContractFunctionRevertedError({
+      abi: executorAbi,
+      data,
+      functionName: "run",
+    }),
+  });
+}
+
+describe("toChainError with an error the call abi does not declare", () => {
+  it("decodes NoActiveSession bubbled from the vault", () => {
+    const raw = encodeErrorResult({
+      abi: strategyVaultAbi,
+      errorName: "NoActiveSession",
+      args: ["0x91E5Bb4576F6871Dac3370dE39f5a772610Cc623"],
+    });
+
+    expect(raw.slice(0, 10)).toBe("0x30278bcb");
+
+    const mapped = toChainError(bubbledThroughExecutor(raw));
+
+    expect(mapped?.code).toBe("session_required");
+    expect(mapped?.action).toBe("open_session");
+  });
+
+  it("decodes ERC20InsufficientBalance bubbled from the token", () => {
+    const raw = encodeErrorResult({
+      abi: demoTokenAbi,
+      errorName: "ERC20InsufficientBalance",
+      args: ["0x91E5Bb4576F6871Dac3370dE39f5a772610Cc623", 40n, 100n],
+    });
+
+    expect(raw.slice(0, 10)).toBe("0xe450d38c");
+
+    const mapped = toChainError(bubbledThroughExecutor(raw));
+
+    expect(mapped?.code).toBe("insufficient_balance");
+    expect(mapped?.action).toBe("fund_vault");
+    expect(mapped?.detail).toContain("100");
+    expect(mapped?.detail).toContain("40");
+  });
+
+  it("still degrades on a selector no contract of ours declares", () => {
+    const mapped = toChainError(bubbledThroughExecutor("0xdeadbeef"));
+
+    expect(mapped?.code).toBe("unknown_revert");
+  });
+});
 
 describe("toChainError", () => {
   it("returns nothing when the user rejected the signature", () => {
