@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { blockKindSchema, blockParamSchema } from "./common.js";
+import { stepConfigSchema } from "./step-config.js";
 
 export const workflowNodeSchema = z.object({
   id: z.string().min(1),
   kind: blockKindSchema,
   title: z.string().min(1),
   subtitle: z.string(),
-  params: z.array(blockParamSchema),
+  params: z.array(blockParamSchema).optional().default([]),
+  config: stepConfigSchema.optional(),
   x: z.number(),
   y: z.number(),
 });
@@ -29,6 +31,8 @@ export const workflowSchema = z.object({
   tokens: z.array(z.string()),
   nodes: z.array(workflowNodeSchema),
   edges: z.array(workflowEdgeSchema),
+  onchainId: z.string().nullable().optional(),
+  vaultAddress: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -53,6 +57,11 @@ export const patchWorkflowBodySchema = z
     tokens: z.array(z.string()).optional(),
     nodes: z.array(workflowNodeSchema).optional(),
     edges: z.array(workflowEdgeSchema).optional(),
+    onchainId: z.string().regex(/^\d+$/).optional(),
+    vaultAddress: z
+      .string()
+      .regex(/^0x[a-fA-F0-9]{40}$/)
+      .optional(),
   })
   .strict();
 

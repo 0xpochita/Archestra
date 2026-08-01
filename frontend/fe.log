@@ -1,0 +1,7 @@
+▲ Next.js 16.2.12 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.9:3000
+- Environments: .env.local
+✓ Ready in 783ms
+
+ GET /studio?template=stable-auto-compound 200 in 2.0s (next.js: 982ms, application-code: 1024ms)

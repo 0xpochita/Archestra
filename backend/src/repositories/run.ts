@@ -15,6 +15,8 @@ function toRunStep(row: typeof runSteps.$inferSelect): RunStep {
     state: row.state as RunStep["state"],
     txHash: row.txHash ?? null,
     gasUsed: row.gasUsed ?? null,
+    tokenOut: row.tokenOut ?? null,
+    amountOut: row.amountOut ?? null,
     error: row.error ?? null,
     startedAt: row.startedAt?.toISOString() ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
@@ -30,6 +32,12 @@ function toRun(row: typeof runs.$inferSelect, steps: RunStep[]): Run {
     graphSnapshot: row.graphSnapshot as { nodes: WorkflowNode[]; edges: WorkflowEdge[] },
     steps,
     estimatedGas: row.estimatedGas ?? null,
+    txHash: row.txHash ?? null,
+    onchainRunId: row.onchainRunId ?? null,
+    totalGasUsed: row.totalGasUsed ?? null,
+    stopped: row.stopped,
+    callerAddress: row.callerAddress ?? null,
+    errorCode: row.errorCode ?? null,
     createdAt: row.createdAt.toISOString(),
     finishedAt: row.finishedAt?.toISOString() ?? null,
   };
@@ -153,11 +161,24 @@ export class RunRepository {
   async updateStatus(
     runId: string,
     status: RunStatus,
-    patch?: { finishedAt?: Date; estimatedGas?: string },
+    patch?: {
+      finishedAt?: Date;
+      estimatedGas?: string;
+      txHash?: string | null;
+      onchainRunId?: string | null;
+      totalGasUsed?: string | null;
+      stopped?: boolean;
+      callerAddress?: string | null;
+      errorCode?: string | null;
+    },
   ): Promise<void> {
     await this.db
       .update(runs)
       .set({ status, ...patch })
       .where(eq(runs.id, runId));
+  }
+
+  async attachTxHash(runId: string, txHash: string): Promise<void> {
+    await this.db.update(runs).set({ txHash }).where(eq(runs.id, runId));
   }
 }

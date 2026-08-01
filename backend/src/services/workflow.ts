@@ -65,7 +65,6 @@ export class WorkflowService {
 
   async patch(id: string, ownerId: string, body: PatchWorkflowBody): Promise<Workflow> {
     const current = await this.workflowRepo.getOwned(id, ownerId);
-
     const newNodes = body.nodes ?? current.nodes;
     const newEdges = body.edges ?? current.edges;
 
@@ -78,6 +77,8 @@ export class WorkflowService {
     if (body.tokens !== undefined) patch.tokens = body.tokens;
     if (body.nodes !== undefined) patch.nodes = body.nodes;
     if (body.edges !== undefined) patch.edges = body.edges;
+    if (body.onchainId !== undefined) patch.onchainId = body.onchainId;
+    if (body.vaultAddress !== undefined) patch.vaultAddress = body.vaultAddress;
 
     return this.workflowRepo.update(id, ownerId, patch);
   }

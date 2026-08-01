@@ -12,6 +12,8 @@ function toWorkflow(row: typeof workflows.$inferSelect): Workflow {
     tokens: row.tokens as string[],
     nodes: row.nodes as WorkflowNode[],
     edges: row.edges as WorkflowEdge[],
+    onchainId: row.onchainId ?? null,
+    vaultAddress: row.vaultAddress ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -22,6 +24,8 @@ export interface WorkflowPatch {
   tokens?: string[];
   nodes?: WorkflowNode[];
   edges?: WorkflowEdge[];
+  onchainId?: string;
+  vaultAddress?: string;
 }
 
 export class WorkflowRepository {
@@ -107,6 +111,8 @@ export class WorkflowRepository {
     if (patch.tokens !== undefined) values.tokens = patch.tokens;
     if (patch.nodes !== undefined) values.nodes = patch.nodes;
     if (patch.edges !== undefined) values.edges = patch.edges;
+    if (patch.onchainId !== undefined) values.onchainId = patch.onchainId;
+    if (patch.vaultAddress !== undefined) values.vaultAddress = patch.vaultAddress;
 
     const rows = await this.db
       .update(workflows)

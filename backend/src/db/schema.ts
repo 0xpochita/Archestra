@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -31,11 +32,22 @@ export const workflows = pgTable(
     tokens: jsonb("tokens").notNull().default([]),
     nodes: jsonb("nodes").notNull().default([]),
     edges: jsonb("edges").notNull().default([]),
+    onchainId: numeric("onchain_id", { precision: 78, scale: 0 }),
+    vaultAddress: text("vault_address"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("workflows_owner_created_idx").on(t.ownerId, t.createdAt)],
 );
+
+export const workflowIdMap = pgTable("workflow_id_map", {
+  onchainId: numeric("onchain_id", { precision: 78, scale: 0 }).primaryKey(),
+  workflowId: text("workflow_id")
+    .notNull()
+    .unique()
+    .references(() => workflows.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const templates = pgTable("templates", {
   id: text("id").primaryKey(),
@@ -68,6 +80,12 @@ export const runs = pgTable(
     mode: runModeEnum("mode").notNull(),
     graphSnapshot: jsonb("graph_snapshot").notNull(),
     estimatedGas: numeric("estimated_gas", { precision: 78, scale: 0 }),
+    txHash: text("tx_hash"),
+    onchainRunId: text("onchain_run_id"),
+    totalGasUsed: numeric("total_gas_used", { precision: 78, scale: 0 }),
+    stopped: boolean("stopped").notNull().default(false),
+    callerAddress: text("caller_address"),
+    errorCode: text("error_code"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
@@ -87,6 +105,8 @@ export const runSteps = pgTable(
     state: stepStateEnum("state").notNull(),
     txHash: text("tx_hash"),
     gasUsed: numeric("gas_used", { precision: 78, scale: 0 }),
+    tokenOut: text("token_out"),
+    amountOut: numeric("amount_out", { precision: 78, scale: 0 }),
     error: text("error"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),

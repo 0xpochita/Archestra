@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { MockChainAdapter } from "./adapters/chain.js";
+import type { ChainAdapter } from "./adapters/chain.js";
 import type { RulesPlanner } from "./adapters/planner.js";
 import type { Database } from "./db/client.js";
 import { config } from "./lib/config.js";
@@ -17,11 +17,13 @@ import type { WorkflowRepository } from "./repositories/workflow.js";
 import { createAssistantRoute } from "./routes/assistant.js";
 import { createCatalogRoute } from "./routes/catalog.js";
 import { createHealthRoute } from "./routes/health.js";
+import { createOnchainRoute } from "./routes/onchain.js";
 import { createOpenApiRoute } from "./routes/openapi.js";
 import { createRunRoute } from "./routes/run.js";
 import { createWorkflowRoute } from "./routes/workflow.js";
 import { AssistantService } from "./services/assistant.js";
 import { CatalogService } from "./services/catalog.js";
+import { OnchainService } from "./services/onchain.js";
 import { RunService } from "./services/run.js";
 import { WorkflowService } from "./services/workflow.js";
 
@@ -31,7 +33,7 @@ export interface AppDependencies {
   workflowRepo: WorkflowRepository;
   runRepo: RunRepository;
   assistantRepo: AssistantRepository;
-  chain: MockChainAdapter;
+  chain: ChainAdapter;
   planner: RulesPlanner;
 }
 
@@ -58,6 +60,7 @@ export function createApp(deps: AppDependencies) {
     deps.workflowRepo,
     deps.planner,
   );
+  const onchainService = new OnchainService();
 
   const v1 = new Hono<{ Variables: ContextVariables }>();
 
@@ -67,14 +70,17 @@ export function createApp(deps: AppDependencies) {
 
   v1.use("*", authMiddleware);
   v1.use("*", defaultRateLimit);
+
   v1.route("/", createWorkflowRoute(workflowService));
 
   v1.use("/workflows/:id/simulate", strictRateLimit);
   v1.use("/workflows/:id/runs", strictRateLimit);
+  v1.use("/runs/:id/tx", strictRateLimit);
   v1.use("/assistant/*", strictRateLimit);
 
   v1.route("/", createRunRoute(runService));
   v1.route("/", createAssistantRoute(assistantService));
+  v1.route("/", createOnchainRoute(onchainService));
 
   app.route("/v1", v1);
 

@@ -1,8 +1,10 @@
 import type { BlockKind } from "../schemas/common.js";
+import type { StepConfig } from "../schemas/step-config.js";
 
 export interface StepRequest {
   kind: BlockKind;
   params: Record<string, string>;
+  config?: StepConfig;
 }
 
 export interface StepResult {
@@ -11,9 +13,36 @@ export interface StepResult {
   error: string | null;
 }
 
+export interface RunCall {
+  to: string;
+  data: string;
+  chainId: number;
+}
+
+export interface OnchainRunOutcome {
+  runId: string;
+  stopped: boolean;
+  stepsExecuted: number;
+  totalGasUsed: bigint;
+  txHash: string;
+  steps: Array<{
+    position: number;
+    stepType: number;
+    kind: BlockKind;
+    adapter: string;
+    tokenOut: string;
+    amountOut: bigint;
+  }>;
+  errorCode?: string;
+  errorDetail?: string;
+}
+
 export interface ChainAdapter {
+  readonly mode: "mock" | "arc";
   estimateGas(steps: StepRequest[]): Promise<bigint>;
-  execute(step: StepRequest, runId: string, position: number): Promise<StepResult>;
+  execute?(step: StepRequest, runId: string, position: number): Promise<StepResult>;
+  buildRunCall?(onchainWorkflowId: bigint): Promise<RunCall>;
+  readRun?(txHash: string): Promise<OnchainRunOutcome>;
 }
 
 const GAS_TABLE: Record<BlockKind, bigint> = {
@@ -45,6 +74,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 export class MockChainAdapter implements ChainAdapter {
+  readonly mode = "mock" as const;
+
   private readonly clock: () => number;
 
   constructor(clock: () => number = Date.now) {
@@ -74,3 +105,5 @@ export class MockChainAdapter implements ChainAdapter {
     };
   }
 }
+
+export { GAS_TABLE };
