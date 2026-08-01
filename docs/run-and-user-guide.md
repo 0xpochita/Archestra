@@ -2,6 +2,8 @@
 
 Panduan untuk menjalankan project secara lokal dan mencoba flow sebagai user. Bahasa campur sengaja: commands tetap English, penjelasan dibuat praktis.
 
+Tambahan debugging FE/on-chain ada di [`frontend-onchain-findings.md`](./frontend-onchain-findings.md).
+
 **Last updated:** 2026-08-01
 
 ---

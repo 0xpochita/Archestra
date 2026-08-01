@@ -6,6 +6,7 @@ Cross-cutting next steps that touch all three layers: **contracts**, **frontend*
 **Companion docs:**
 - [`backend-progress.md`](./backend-progress.md) — backend delivery log
 - [`backend-next-steps.md`](./backend-next-steps.md) — backend-scoped roadmap
+- [`frontend-onchain-findings.md`](./frontend-onchain-findings.md) — live FE on-chain debugging findings
 - [`plan/report/report.md`](./plan/report/report.md) — frontend Arc integration report
 - [`plan/infoutkBE.md`](./plan/infoutkBE.md) — backend chain info
 - [`plan/infoutkFE.md`](./plan/infoutkFE.md) — frontend chain info

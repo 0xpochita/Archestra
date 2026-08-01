@@ -191,6 +191,7 @@ x-owner-id: <owner-id>
 - `docs/backend-progress.md` — detailed backend progress log.
 - `docs/backend-next-steps.md` — backend-specific task roadmap.
 - `docs/project-integration-next-steps.md` — cross-project integration roadmap.
+- `docs/frontend-onchain-findings.md` — frontend on-chain debugging findings and merge guidance.
 - `docs/run-and-user-guide.md` — how to run the stack and use it as a user.
 - `docs/plan/report/report.md` — frontend Arc integration report.
 
