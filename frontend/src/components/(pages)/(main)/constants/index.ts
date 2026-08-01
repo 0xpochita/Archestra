@@ -6,6 +6,35 @@ import type { BlockKind, WorkflowEdge, WorkflowNode } from "../types";
 export { BLOCK_CATALOG, STRATEGY_TEMPLATES };
 
 export const WORKFLOW_NAME = "USDC Auto-Compound Strategy";
+export const BLANK_WORKFLOW_NAME = "Untitled strategy";
+export const NAME_STRATEGY_TITLE = "Name your strategy";
+export const NAME_STRATEGY_BODY =
+  "The canvas is empty and ready. Give this strategy a name, then add the blocks it needs.";
+export const NAME_STRATEGY_SUGGESTIONS = [
+  "Weekly USDC compounding",
+  "ETH accumulation",
+  "Idle cash sweep",
+];
+export const STEP_RESULT_NOTES: Partial<Record<BlockKind, string>> = {
+  trigger: "schedule checked",
+  approve: "allowance granted",
+  condition: "bound passed",
+  alert: "alert emitted",
+};
+export const STEP_RESULT_FALLBACK = "no tokens moved";
+
+export const GUIDED_TITLE = "Run this strategy end to end";
+export const GUIDED_BODY =
+  "Each step is one wallet signature. Anything already done is ticked off and skipped.";
+export const GUIDED_DEMO_AMOUNT = "100";
+export const GUIDED_SESSION_PER_RUN = "500";
+export const GUIDED_SESSION_PER_DAY = "2000";
+export const GUIDED_SESSION_DAYS = 30;
+export const GUIDED_CTA = "Create workflow";
+
+export const EMPTY_CANVAS_TITLE = "This canvas is empty";
+export const EMPTY_CANVAS_BODY =
+  "Add blocks from the dock below, or ask the assistant to draft the chain for you.";
 export const WORKFLOW_TOKENS: LogoName[] = ["usdc"];
 export const BREADCRUMB_TRAIL = ["Workflows", WORKFLOW_NAME];
 

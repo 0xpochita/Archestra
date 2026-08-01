@@ -11,7 +11,7 @@ const SECTION_LABEL =
   "text-[10px] font-semibold tracking-[0.16em] text-ink-subtle uppercase";
 const ACTION_CLASS =
   "flex-1 border border-line px-2 py-1.5 text-xs text-ink transition-colors hover:bg-surface-hover disabled:opacity-50";
-const MINT_AMOUNT = "1000";
+const DEFAULT_AMOUNT = "100";
 
 interface FundingSectionProps {
   vaultAddress?: Address;
@@ -51,7 +51,7 @@ export function FundingSection({
       <h2 className={SECTION_LABEL}>Move funds</h2>
 
       {fundable.map(({ token }) => {
-        const raw = amounts[token.id] ?? "";
+        const raw = amounts[token.id] ?? DEFAULT_AMOUNT;
         const parsed = parseTokenAmount(raw, token.decimals);
         const inputId = `funding-${token.id}`;
 
@@ -75,16 +75,9 @@ export function FundingSection({
             <div className="flex gap-1.5">
               <button
                 type="button"
-                disabled={actions.isWriting || !ownerAddress}
+                disabled={actions.isWriting || parsed === null || !ownerAddress}
                 onClick={() =>
-                  void run(
-                    actions.mint(
-                      token.id,
-                      parsed ??
-                        parseTokenAmount(MINT_AMOUNT, token.decimals) ??
-                        0n,
-                    ),
-                  )
+                  parsed && void run(actions.mint(token.id, parsed))
                 }
                 className={ACTION_CLASS}
               >

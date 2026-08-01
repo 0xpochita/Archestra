@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
-import { STUDIO_PATH } from "@/constants/assets";
+import { NEW_STUDIO_PATH } from "@/constants/assets";
 import { STRATEGY_TEMPLATES } from "@/constants/blocks";
 import {
   BLANK_TEMPLATE_BODY,
@@ -51,7 +51,7 @@ export function TemplateGallery() {
         </div>
 
         <Link
-          href={STUDIO_PATH}
+          href={NEW_STUDIO_PATH}
           className="flex items-center gap-2 bg-brand px-4 py-2.5 text-sm font-medium text-on-brand transition-opacity hover:opacity-90"
         >
           <Icon name="plus" className="size-4" />
@@ -66,7 +66,7 @@ export function TemplateGallery() {
 
         {normalized.length === 0 ? (
           <Link
-            href={STUDIO_PATH}
+            href={NEW_STUDIO_PATH}
             className="flex flex-col items-center justify-center gap-2 border border-dashed border-line-strong bg-surface p-10 text-center transition-colors hover:bg-surface-hover"
           >
             <span className="grid size-10 place-items-center border border-line bg-surface-raised text-ink">

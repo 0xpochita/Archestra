@@ -1,9 +1,17 @@
 "use client";
 
 import type { PointerEvent, RefObject, WheelEvent } from "react";
-import { GRID_DOT_SPACING, ZOOM_STEP } from "../constants";
+import { Icon } from "@/components/ui/Icon";
+import {
+  EMPTY_CANVAS_BODY,
+  EMPTY_CANVAS_TITLE,
+  GRID_DOT_SPACING,
+  GUIDED_CTA,
+  NODE_WIDTH,
+  ZOOM_STEP,
+} from "../constants";
 import type { NodeRunState, Viewport, WorkflowGraph } from "../types";
-import { getEdgeGeometry } from "../utils";
+import { getEdgeGeometry, getGraphBounds } from "../utils";
 import { WorkflowNodeCard } from "./WorkflowNodeCard";
 
 interface WorkflowCanvasProps {
@@ -20,6 +28,8 @@ interface WorkflowCanvasProps {
   onMoveStart: () => void;
   onMoveNode: (id: string, deltaX: number, deltaY: number) => void;
   onAddNext: (id: string) => void;
+  onAddFirstBlock: () => void;
+  onGuidedSetup: () => void;
 }
 
 export function WorkflowCanvas({
@@ -36,7 +46,10 @@ export function WorkflowCanvas({
   onMoveStart,
   onMoveNode,
   onAddNext,
+  onAddFirstBlock,
+  onGuidedSetup,
 }: WorkflowCanvasProps) {
+  const bounds = getGraphBounds(graph.nodes);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -81,10 +94,28 @@ export function WorkflowCanvas({
     >
       {graph.nodes.length === 0 ? (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <p className="max-w-xs text-center text-sm text-ink-subtle">
-            Canvas is empty. Pick a block below or ask the assistant to draft a
-            strategy for you.
-          </p>
+          <div className="flex max-w-xs flex-col items-center gap-3 text-center">
+            <span className="grid size-11 place-items-center border border-dashed border-line-strong bg-surface text-ink-subtle">
+              <Icon name="addBlocks" className="size-5" />
+            </span>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium text-ink">
+                {EMPTY_CANVAS_TITLE}
+              </p>
+              <p className="text-xs leading-relaxed text-ink-subtle">
+                {EMPTY_CANVAS_BODY}
+              </p>
+            </div>
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={onAddFirstBlock}
+              className="pointer-events-auto flex items-center gap-2 bg-brand px-3.5 py-2 text-sm font-medium text-on-brand transition-opacity hover:opacity-90"
+            >
+              <Icon name="plus" className="size-4" />
+              Add your first block
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -149,6 +180,27 @@ export function WorkflowCanvas({
             onAddNext={onAddNext}
           />
         ))}
+
+        {graph.nodes.length > 0 ? (
+          <div
+            style={{
+              left: bounds.x,
+              top: bounds.y + bounds.height + 40,
+              width: Math.max(bounds.width, NODE_WIDTH),
+            }}
+            className="absolute grid place-items-center"
+          >
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={onGuidedSetup}
+              className="flex items-center gap-2 border border-ink bg-brand px-4 py-2.5 text-sm font-medium text-on-brand shadow-lg transition-opacity hover:opacity-90"
+            >
+              <Icon name="play" className="size-4" />
+              {GUIDED_CTA}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
