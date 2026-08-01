@@ -67,6 +67,19 @@ describe("toChainError with an error the call abi does not declare", () => {
   });
 });
 
+describe("toChainError on a throttled endpoint", () => {
+  it("names the rate limit instead of showing the provider string", () => {
+    const mapped = toChainError(
+      new BaseError(
+        "RPC 0x4cef52 Custom eth_sendRawTransaction: Request is being rate limited.",
+      ),
+    );
+
+    expect(mapped?.code).toBe("rpc_rate_limited");
+    expect(mapped?.action).toBe("wait");
+  });
+});
+
 describe("toChainError", () => {
   it("returns nothing when the user rejected the signature", () => {
     const error = new BaseError("rejected", {

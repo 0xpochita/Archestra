@@ -217,6 +217,8 @@ function decodeRevert(
   }
 }
 
+const RATE_LIMIT_PATTERN = /rate limit|rate-limit|too many requests|429/i;
+
 const hasName = (value: unknown): value is { name: string } =>
   typeof value === "object" && value !== null && "name" in value;
 
@@ -233,6 +235,16 @@ export function toChainError(error: unknown): ChainError | null {
   if (!error || isUserRejection(error)) return null;
 
   if (error instanceof BaseError) {
+    if (RATE_LIMIT_PATTERN.test(error.message)) {
+      return {
+        code: "rpc_rate_limited",
+        title: "The Arc RPC is rate limiting",
+        detail:
+          "Nothing was sent. Wait about a minute, or point the wallet and the app at another Arc endpoint.",
+        action: "wait",
+      };
+    }
+
     const reverted = error.walk(
       (cause) => cause instanceof ContractFunctionRevertedError,
     );
