@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { parseEventLogs } from "viem";
 import {
@@ -30,7 +30,6 @@ function readWorkflowId(value: string | null) {
 }
 
 export function useWorkflowRun(acceptedExecutor?: `0x${string}`) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const workflowId = readWorkflowId(searchParams.get(WORKFLOW_PARAM));
@@ -63,8 +62,11 @@ export function useWorkflowRun(acceptedExecutor?: `0x${string}`) {
 
     const next = new URLSearchParams(searchParams.toString());
     next.set(WORKFLOW_PARAM, created.args.workflowId.toString());
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }, [createReceipt.data, router, pathname, searchParams]);
+    const nextUrl = `${pathname}?${next.toString()}`;
+    if (nextUrl !== `${pathname}?${searchParams.toString()}`) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [createReceipt.data, pathname, searchParams]);
 
   useEffect(() => {
     const receipt = runReceipt.data;
@@ -95,11 +97,13 @@ export function useWorkflowRun(acceptedExecutor?: `0x${string}`) {
     return [];
   };
 
-  const runWorkflow = () => {
+  const runWorkflow = async () => {
     if (workflowId === null || !acceptedExecutor) return;
+    const blocked = toChainError(simulation.error);
+    if (blocked) throw new Error(`${blocked.title}. ${blocked.detail}`);
     setOutcome(null);
 
-    run.writeContract({
+    return run.writeContractAsync({
       abi: executorAbi,
       address: acceptedExecutor,
       functionName: "run",

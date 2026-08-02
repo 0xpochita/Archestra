@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LOGO_ARTWORK } from "@/components/ui/logo-artwork";
 import { STRATEGY_TEMPLATES } from "@/constants/blocks";
@@ -29,7 +29,6 @@ export function StudioSession({
   onStartBlank,
   onRestore,
 }: StudioSessionProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isReady, setIsReady] = useState(false);
@@ -99,7 +98,10 @@ export function StudioSession({
         if (!hasWorkflowParam && active.onchainId) {
           const next = new URLSearchParams(searchParams.toString());
           next.set("workflow", active.onchainId);
-          router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+          const nextUrl = `${pathname}?${next.toString()}`;
+          if (nextUrl !== `${pathname}?${searchParams.toString()}`) {
+            window.history.replaceState(null, "", nextUrl);
+          }
         }
       }
 
@@ -113,7 +115,6 @@ export function StudioSession({
     requestedStrategyId,
     requestedTemplateId,
     hasWorkflowParam,
-    router,
     pathname,
     searchParams,
   ]);

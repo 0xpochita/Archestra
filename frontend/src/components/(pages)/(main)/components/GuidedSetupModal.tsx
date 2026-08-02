@@ -70,6 +70,7 @@ export function GuidedSetupModal({
   const [recoveryStep, setRecoveryStep] = useState<StepId | null>(null);
   const [busyStep, setBusyStep] = useState<StepId | null>(null);
   const { outcome } = run;
+  const blocked = run.blockedReason ?? run.runError ?? run.createError;
 
   useEffect(() => {
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -188,9 +189,9 @@ export function GuidedSetupModal({
       body: "Every step executes in one transaction. Nothing is partial: it either all runs or none of it does.",
       actionLabel: "Run strategy",
       isDone: outcome !== null,
-      isReady: run.isCreated,
+      isReady: run.isCreated && !blocked,
       run: async () => {
-        run.runWorkflow();
+        await run.runWorkflow();
       },
     },
   ];
@@ -226,8 +227,6 @@ export function GuidedSetupModal({
       setBusyStep(null);
     }
   };
-
-  const blocked = run.blockedReason ?? run.runError ?? run.createError;
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-6">
